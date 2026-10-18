@@ -70,6 +70,30 @@
         "gofmt and git diff --check: passed; no tracked unit/widget tests added or run.",
         "Flutter unchanged; analyze and device interaction outside T02 scope. Shared dotenv not read and no paid provider calls made."
       ]
+    },
+    "T04": {
+      "status": "done",
+      "worktree": "/home/kotdath/omp/personal/ai/paper-scout-worktrees/T04",
+      "branch": "dag/t04",
+      "threads": {
+        "executor": "thr_ba2t4pdzyv",
+        "reviewer": "thr_nv2jg3r35t",
+        "simplifier": "thr_js9tjwnf58"
+      },
+      "base_sha": "01131aba83491b196e75ace742625a2fad0c1d57",
+      "approved_head_sha": "9e7c8b1fb5bba2636dd0ccb525af2bbad594cb38",
+      "merge_sha": "649c59e22e709f92027978418011087eb0d3242b",
+      "checks": [
+        "Pre-merge: main clean at expected 838bb830ade663d366fb8883f70e5cce2b2aaa3c; base ancestor; dag/t04 and clean worktree at approved 9e7c8b1fb5bba2636dd0ccb525af2bbad594cb38; two review/fix cycles, simplification and final reviewer approval confirmed; verify.patch matches approved diff.",
+        "git merge --no-ff dag/t04: passed; merge 649c59e22e709f92027978418011087eb0d3242b. Resolved equivalent foundation migration-list assertions with one complete discovered-migration check; independent worktrees preserved.",
+        "go build -mod=readonly ./..., go vet -mod=readonly ./... and go mod verify: passed using existing root-worktree-local caches and GOPROXY=off.",
+        "Rebuilt integration/arxiv: passed HTTP/SQLite checks; math/cs/nlin/q-bio legacy aliases, normalized IDs, latest/exact versions, cache identity, deduplication, concurrent misses, expiry, persistence, bounded retries, Retry-After, malformed/oversized Atom, redirects and cancellation; 27 requests all at least three seconds apart.",
+        "python3 integration/foundation.py: passed real server HTTP/SQLite, full migration set, FTS5/BM25, concurrent readiness, WAL, private DB, restart/persistence, drift rejection, extraction-tool readiness and sanitized configuration checks.",
+        "integration/accounts.py main(): passed with runtime redirected to root t01 cache; two-account seed, bcrypt, login/me, ownership, strict inputs, hashed tokens, logout/expiry and persistence. Ephemeral ports and temporary databases used.",
+        "integration/deepseek.py main(): passed with runtime redirected to root t01 cache; local HTTP completion/tool exchange, usage, sanitized failures, redirects, invalid/oversized bodies, cancellation and deadlines. No paid live calls.",
+        "gofmt and git diff --check: passed; no tracked unit/widget tests added or run. Flutter unchanged.",
+        "Approved live arXiv evidence retained in docs/verification/T04.md; live provider checks not repeated during integration. Extraction, full reading and research-tool wiring remain outside T04 scope. Shared dotenv not read."
+      ]
     }
   }
 }
