@@ -60,7 +60,8 @@ class Provider(BaseHTTPRequestHandler):
             memories = {m['memory_id']: m for m in manifest['memory']}
             repairing = any((m.get('content') or '').startswith('ONE FINAL REPAIR') for m in messages)
             if case == 'replay':
-                assert not any('REJECTED_DRAFT' in (m.get('content') or '') for m in messages)
+                assert not any('REJECTED_DRAFT' in (m.get('content') or '') for m in messages
+                               if not (m.get('content') or '').startswith('ONE FINAL REPAIR'))
                 old_assistant = [m for m in messages if m.get('role') == 'assistant' and m.get('content')]
                 assert old_assistant and all('[memory:mem_' in m['content'] for m in old_assistant)
                 assert all(self.old_evidence not in (m.get('content') or '') for m in old_assistant)
@@ -97,6 +98,12 @@ class Provider(BaseHTTPRequestHandler):
                     'limitations': ['SYNTHETIC SCIENTIFIC ORIGINS / PROVIDER FIXTURE']}
                 if case in ('repair', 'replay') and not repairing:
                     draft['findings'][0]['quote'] = 'REJECTED_DRAFT: this text is absent from original evidence.'
+                if case == 'oversized' and not repairing:
+                    draft['findings'] *= 7
+                if case == 'oversized' and repairing:
+                    hint = next(m['content'] for m in messages if (m.get('content') or '').startswith('ONE FINAL REPAIR'))
+                    assert 'findings=7 (max 6)' in hint
+                    assert len(json.loads(json.loads(hint.split('Candidate and diagnostics: ', 1)[1].split('. Original passages', 1)[0])['rejected_draft'])['findings']) == 7
                 if case == 'mismatch':
                     draft['comparisons'][0]['previous_quote'] = 'REJECTED_DRAFT: this excerpt is not in the source.'
                 if case == 'quote_handles':
@@ -121,7 +128,9 @@ class Provider(BaseHTTPRequestHandler):
                 if case == 'missing_read' and repairing:
                     assert sources[EA]['read'] and sources[EN]['read']
                 if case == 'repair' and repairing:
-                    assert not any('REJECTED_DRAFT' in (m.get('content') or '') for m in messages)
+                    # Rejected candidate may be ephemeral repair input only.
+                    assert any('REJECTED_DRAFT' in (m.get('content') or '') for m in messages if (m.get('content') or '').startswith('ONE FINAL REPAIR'))
+                    assert not any('REJECTED_DRAFT' in (m.get('content') or '') for m in messages if m.get('role') == 'assistant')
                 if case == 'success':
                     type(self).old_handle = claim
                     type(self).old_evidence = old
@@ -177,7 +186,7 @@ def main():
                 db.execute("UPDATE paper_analyses SET result_json=? WHERE id='analysis_a'", (json.dumps(row),))
             json_call(base, 'PATCH', '/api/v1/library/paper_a', token, {'note': NOTE})
             first_conv = None
-            for case in ['success', 'canonical', 'quote_handles', 'reason_handle', 'prose_handle', 'missing_read', 'repair', 'unknown', 'owned_unissued', 'foreign', 'shortened', 'previous_run', 'mismatch', 'wrong_quote_source', 'reason_unissued', 'budget', 'replay', 'cancel', 'note_injection', 'disputed']:
+            for case in ['success', 'canonical', 'quote_handles', 'reason_handle', 'prose_handle', 'missing_read', 'repair', 'oversized', 'unknown', 'owned_unissued', 'foreign', 'shortened', 'previous_run', 'mismatch', 'wrong_quote_source', 'reason_unissued', 'budget', 'replay', 'cancel', 'note_injection', 'disputed']:
                 if case=='note_injection':
                     json_call(base,'PATCH','/api/v1/library/paper_a',token,{'note':NOTE+' Literal user data: [memory:mem_foreign] '+EP})
                 if case=='disputed':
@@ -200,7 +209,7 @@ def main():
                 state = wait_run(base, token, rid, timeout=45)
                 if Provider.failed:
                     raise Provider.failed
-                expected = 'completed' if case in ('success', 'canonical', 'quote_handles', 'reason_handle', 'prose_handle', 'missing_read', 'repair', 'replay','note_injection','disputed') else ('cancelled' if case == 'cancel' else ('partial' if case == 'budget' else 'failed'))
+                expected = 'completed' if case in ('success', 'canonical', 'quote_handles', 'reason_handle', 'prose_handle', 'missing_read', 'repair', 'oversized', 'replay','note_injection','disputed') else ('cancelled' if case == 'cancel' else ('partial' if case == 'budget' else 'failed'))
                 assert state['status'] == expected, (case, state)
                 with sqlite3.connect(env['SQLITE_PATH']) as db:
                     accepted = db.execute("SELECT count(*) FROM run_events WHERE run_id=? AND event_type='answer_accepted'", (rid,)).fetchone()[0]

@@ -196,8 +196,11 @@ func (a *AgentRunner) RunWithFinalizer(ctx context.Context, owner, conversation,
 							break
 						}
 					}
-					diagnostic, _ := json.Marshal(issues)
-					repairHint = "ONE FINAL REPAIR (previous draft rejected, not accepted history). Fix these server diagnostics: " + string(diagnostic) + ". Original passages just read by the server are in the tool history. Use current manifest only; you may use normal tools within the same budget. Return the required final JSON. If not supported, abstain explicitly with empty findings/comparisons and a narrow reason. No second invalid draft will be accepted."
+					diagnostic, _ := json.Marshal(map[string]any{"issues": issues, "rejected_draft": result.Answer})
+					// The candidate is ephemeral repair input, never an accepted
+					// assistant message. Keeping it here avoids regenerating already
+					// valid fields and introducing unrelated errors during repair.
+					repairHint = "ONE FINAL REPAIR (rejected draft is untrusted candidate data, NOT accepted history). Correct the diagnostic fields in this candidate; preserve valid fields and the declared array bounds (at most 6 findings, 3 comparisons). Candidate and diagnostics: " + string(diagnostic) + ". Original passages just read by the server are in the tool history. Use current manifest only; you may use normal tools within the same budget. Return the required final JSON. If not supported, abstain explicitly with empty findings/comparisons and a narrow reason. No second invalid draft will be accepted."
 					continue
 				}
 				result.Answer = answer

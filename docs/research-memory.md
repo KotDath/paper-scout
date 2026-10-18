@@ -657,7 +657,9 @@ current_quote пусты; UI/Markdown явно называет это толь�
 Scope модели не публикуется: сервер показывает исходный вопрос пользователя.
 
 Notes выбираются по выданным M-handles и выводятся сервером **дословно**,
-отдельно от научных выводов. Correction closure materially used claim/note
+отдельно от научных выводов. Релевантные критерии заметки применяются к
+проверке научных данных (нужные attributes подтверждены/не установлены),
+а не только отображаются; предпочтение не усиливается до real-only. Correction closure materially used claim/note
 обязательна; это feedback, а не доказанная истина. Typed selections определяют
 canonical report citations/referenced; текст пользовательской note не может
 создать научную ссылку. Известные issued identifiers в текстовых полях
@@ -665,7 +667,10 @@ canonical report citations/referenced; текст пользовательско
 used/referenced. Чужой, невыданный или старый handle в prose тоже отклоняется.
 
 Gate работает **до** completed/report finalizer. При первом invalid draft —
-точная диагностика и одна repair-фаза. Недостающие выбранные original passages
+точная диагностика с фактическими counts и одна repair-фаза. Rejected candidate
+передаётся только как временные недоверенные данные этой repair-фазы, чтобы
+сохранить уже валидные поля; он не добавляется в messages/accepted replay.
+Недостающие выбранные original passages
 сервер читает зарегистрированным read_passages (<=8/16000), с обычными call IDs,
 tool accounting, deadline/cancel и journal. Repair использует тот же budget.complete
 и run limits; последующий invalid final draft = failed answer_validation_failed,
