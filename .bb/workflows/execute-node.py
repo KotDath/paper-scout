@@ -3,7 +3,6 @@
 import argparse
 import fcntl
 import json
-import os
 from pathlib import Path
 import subprocess
 import sys
@@ -32,11 +31,45 @@ def role_result(output, stage):
     if text.startswith("```"):
         text = "\n".join(text.splitlines()[1:-1])
     value = json.loads(text)
+    if not isinstance(value, dict):
+        raise ValueError("Role result must be an object")
     if value.get("stage") != stage:
         raise RuntimeError(f"Expected stage {stage}, got {value.get('stage')}")
     if value.get("status") not in {"ready", "approved", "changes_requested", "blocked"}:
         raise RuntimeError("Role returned unknown status")
     return value
+
+
+def completed_stage(thread_id, stage):
+    """Only accept a stage result from a successfully completed provider turn."""
+    cursor = 0
+    candidates = {}
+    completed = None
+    latest_status = None
+    while True:
+        events = bb("thread", "log", thread_id, "--after-seq", str(cursor), "--limit", "100")
+        if not events:
+            break
+        for event in events:
+            cursor = max(cursor, event["seq"])
+            turn_id = event.get("scope", {}).get("turnId")
+            details = event.get("data", {})
+            if event["type"] in {"client/turn/requested", "turn/started"}:
+                latest_status = "running"
+            elif event["type"] == "item/completed":
+                item = details.get("item", {})
+                if item.get("type") == "agentMessage":
+                    try:
+                        candidates[turn_id] = role_result(item.get("text", ""), stage)
+                    except (ValueError, TypeError, AttributeError):
+                        pass
+            elif event["type"] == "turn/completed":
+                latest_status = details.get("status")
+                if latest_status == "completed" and turn_id in candidates:
+                    completed = candidates[turn_id]
+        if len(events) < 100:
+            break
+    return completed, latest_status
 
 
 def main():
@@ -68,6 +101,7 @@ def main():
     ledger.update(node_id=node, branch=branch, worktree=str(worktree), base_sha=base)
     ledger.setdefault("threads", {})
     ledger.setdefault("stages", {})
+    ledger.setdefault("dispatches", {})
     save(ledger_path, ledger)
     save(scratch / "graph-snapshot.json", data["graph"])
     common = f"""Paper Scout DAG node {node}: {data['task']['title']}.
@@ -96,6 +130,11 @@ Findings must be concrete with file/location, severity and required fix. Commit 
         prompt_file = scratch / f"{stage}.prompt.md"
         prompt_file.write_text(message)
         thread_id = ledger["threads"].get(role)
+        recovered = None
+        if thread_id:
+            recovered, _ = completed_stage(thread_id, stage)
+        if recovered is not None:
+            print(f"{node} {stage}: recovered completed result from {thread_id}", file=sys.stderr, flush=True)
         if not thread_id:
             result = bb("thread", "spawn", "--project", data["project_id"],
                         "--environment", str(worktree), "--parent-thread", data["origin_thread"],
@@ -107,16 +146,33 @@ Findings must be concrete with file/location, severity and required fix. Commit 
                         "--title", f"{node} {role}", "--prompt-file", str(prompt_file))
             thread_id = result["id"]
             ledger["threads"][role] = thread_id
+            ledger["dispatches"][stage] = thread_id
             save(ledger_path, ledger)
-        else:
+        elif recovered is None and stage not in ledger["dispatches"]:
             bb("thread", "tell", thread_id, "--message-file", str(prompt_file), "--mode", "auto")
+            ledger["dispatches"][stage] = thread_id
+            save(ledger_path, ledger)
         print(f"{node} {stage}: {thread_id}", file=sys.stderr, flush=True)
         deadline = time.monotonic() + 3600
-        while True:
+        value = recovered
+        while value is None:
             wait = subprocess.run(["bb", "thread", "wait", thread_id, "--timeout", "45s", "--json"],
                                   capture_output=True, text=True, timeout=55)
             if wait.returncode == 0:
-                break
+                value, terminal_status = completed_stage(thread_id, stage)
+                if value is not None:
+                    break
+                if terminal_status == "running":
+                    if time.monotonic() >= deadline:
+                        raise RuntimeError(f"Stage {stage} timeout; thread kept for inspection")
+                    # The BB status projection can lag the recorded request.
+                    # Wait on a state transition rather than polling/sleeping.
+                    subprocess.run(["bb", "thread", "wait", thread_id, "--status", "active", "--timeout", "45s", "--json"],
+                                   capture_output=True, text=True, timeout=55)
+                    continue
+                if terminal_status in {"interrupted", "failed", "cancelled"}:
+                    raise RuntimeError(f"{stage}: provider turn {terminal_status}; no completed stage result. Worktree preserved.")
+                raise RuntimeError(f"{stage}: idle without a completed JSON result for this stage; worktree preserved.")
             info = bb("thread", "show", thread_id)
             status = info["thread"]["status"]
             if status in {"error", "stopping"}:
@@ -124,9 +180,7 @@ Findings must be concrete with file/location, severity and required fix. Commit 
             if time.monotonic() >= deadline:
                 raise RuntimeError(f"Stage {stage} timeout; thread kept for inspection")
             print(f"{node} {stage}: waiting ({status})", file=sys.stderr, flush=True)
-        output = bb("thread", "output", thread_id)["output"]
-        (scratch / f"{stage}.output.txt").write_text(output or "")
-        value = role_result(output or "", stage)
+        (scratch / f"{stage}.output.txt").write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n")
         ledger["stages"][stage] = value
         save(ledger_path, ledger)
         if value["status"] == "blocked":
