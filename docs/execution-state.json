@@ -2,5 +2,28 @@
   "schema_version": 1,
   "target_branch": "main",
   "protocol": "isolated-worktree-two-reviews-simplify-merge",
-  "nodes": {}
+  "nodes": {
+    "T01": {
+      "status": "done",
+      "worktree": "/home/kotdath/omp/personal/ai/paper-scout-worktrees/T01",
+      "branch": "dag/t01",
+      "threads": {
+        "executor": "thr_2bfgaqvkv4",
+        "reviewer": "thr_47cqkqgwkm",
+        "simplifier": "thr_wainpyjuus"
+      },
+      "base_sha": "0fae8684f04899f4f35685e6997d11522a39471a",
+      "approved_head_sha": "f9311513bbad8be63b4914ab61e042b9d2241930",
+      "merge_sha": "3d3f799254001301349275f1dec2e0f255dd799e",
+      "checks": [
+        "Pre-merge: main clean at expected e262204; base ancestor; dag/t01 and clean worktree at approved f931151; two reviews and final reviewer approval confirmed.",
+        "git merge --no-ff dag/t01: successful, no conflicts; independent worktrees preserved.",
+        "python3 integration/foundation.py: passed; includes Go build and real HTTP/SQLite process checks on an ephemeral port and temporary database.",
+        "Integration: FTS5 insert/MATCH/BM25, WAL/foreign_keys/busy_timeout, 16 concurrent readiness requests, private DB permissions, graceful SIGTERM, restart and persistence passed.",
+        "Integration: missing Poppler, migration checksum drift, invalid configuration, dotenv precedence and sanitized dotenv errors passed.",
+        "go vet ./... and go mod verify: passed with worktree-local caches.",
+        "gofmt and git diff --check: passed; no unit/widget test files; Flutter and external provider calls outside T01 scope and not run."
+      ]
+    }
+  }
 }
