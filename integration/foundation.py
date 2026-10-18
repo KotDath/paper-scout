@@ -95,7 +95,8 @@ def main():
             with sqlite3.connect(env["SQLITE_PATH"]) as db:
                 assert db.execute("PRAGMA journal_mode").fetchone() == ("wal",)
                 ledger = db.execute("SELECT * FROM schema_migrations").fetchall()
-                assert len(ledger) == 1
+                expected = sorted(path.name for path in (ROOT / "internal/store/migrations").glob("*.sql"))
+                assert sorted(row[0] for row in ledger) == ["migrations/" + name for name in expected]
                 assert ledger[0][0] == "migrations/T01_foundation.sql"
                 assert len(ledger[0][1]) == 64
                 # A real unrelated row must survive restart and migration replay.
@@ -135,7 +136,7 @@ def main():
                                  capture_output=True, text=True, timeout=20)
         assert failure.returncode == 1 and "migration checksum mismatch" in failure.stdout
         with sqlite3.connect(env["SQLITE_PATH"]) as db:
-            assert db.execute("SELECT checksum FROM schema_migrations").fetchone() == ("changed",)
+            assert all(row == ("changed",) for row in db.execute("SELECT checksum FROM schema_migrations"))
             assert db.execute("SELECT COUNT(*) FROM integration_persistence").fetchone() == (1,)
         print("PASS: migration drift blocks startup without overwriting existing data")
 
