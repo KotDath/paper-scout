@@ -100,8 +100,7 @@ def main():
                     for path in (ROOT / "internal/store/migrations").glob("*.sql")
                 )
                 assert sorted(row[0] for row in ledger) == expected_migrations
-                assert ledger[0][0] == "migrations/T01_foundation.sql"
-                assert len(ledger[0][1]) == 64
+                assert all(len(row[1]) == 64 for row in ledger)
                 # A real unrelated row must survive restart and migration replay.
                 db.execute("CREATE TABLE integration_persistence(value TEXT NOT NULL)")
                 db.execute("INSERT INTO integration_persistence VALUES ('survives restart')")
