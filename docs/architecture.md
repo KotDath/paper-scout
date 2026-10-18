@@ -120,3 +120,7 @@ docs/                проектная документация
 data/                локальные данные, исключены из Git
 artifacts/           результаты приёмки и видео, исключены из Git
 ```
+
+## Память между исследованиями — продолжение T19–T22
+
+Память имеет три уровня: эпизоды исходных исследований, атомарные записи methods/results/limitations с evidence из существующего Analysis и явные пользовательские notes/corrections, рабочий контекст нового run. internal/researchmemory выполняет bounded capture/consolidation (ADD/NOOP, явные revisions/exclusions) и hybrid recall (SQLite FTS5, существующий EmbeddingClient, RRF). Исходные отчёты/analyses не переписываются. AgentRunner перед первым запросом модели автоматически получает релевантные прошлые исследования вне текущего диалога. Снимок recall и проверенные ссылки сохраняются на run/report; UI отличает найденное от реально процитированного. Обязательна wiring в cmd/paper-scout. Полные границы, конкурентные обновления и критерии — [research-memory.md](research-memory.md).

@@ -85,3 +85,19 @@ T01 → T03 → T04 → T05 → T06 → T02 → T07 → T08 → T09 → T10 → 
 4. Не добавлять расписания, MCP, поддержку, регистрацию или отдельную векторную БД в критический путь.
 5. Внешний временный сбой записывать отдельно от ошибки приложения. Моки, cache hit и live network call явно различать в артефактах.
 6. После готовности конкретной функции обновлять её статус и фактические команды запуска, а не обозначать весь проект завершённым.
+
+## Продолжение: память между исследованиями
+
+Предыдущие T01–T18 выполнены. Новый пользовательский результат и фиксированные
+контракты: [research-memory.md](research-memory.md). Не обозначать его готовым
+по прежним артефактам. Зависимости: `T18 → T19 → {T20, T21} → T22`.
+
+| ID | Задача | Зависит от | Проверяемый результат |
+| --- | --- | --- | --- |
+| T19 | Owner-scoped write/consolidation памяти, hybrid recall и HTTP | T18 | Эпизоды reports + atomic method/result/limitation cards из existing Analysis + versioned notes/corrections/exclusions; bounded ADD/NOOP/write/read; настоящий BM25+Qwen3+RRF; backfill без DeepSeek сохраняет пользовательские поправки; актуализация/удаление notes без stale публикации; 404/изоляция обеих веток; Go/JSON-контракты для T20/T21 зафиксированы в research-memory.md. AgentRunner и Flutter не меняет |
+| T20 | Автоматический recall и доказуемое сравнение в агенте | T19 | Capture после report commit с восстановлением пропущенного capture без платного replay; перед первым model request recall по вопросу вне диалога; снимки/referenced IDs, provenance, личная note отделена от фактов; validated memory links; existing Report research_memory и event; production cmd/paper-scout wiring, bounded бюджеты; новые инструменты не заменяют automatic recall. Интеграции без unit tests |
+| T21 | Flutter: найденная память и переход к прошлому исследованию | T19 | Optional research_memory разбирается по контракту; recalled отличается от referenced, открывается прежний отчёт/статья/заметка без потери выбранного run, note объяснена как будущий контекст, explicit correction/exclude/restore и revision работают, 401 очищает память. Реальный UI через claude-in-mobile, fixtures подписаны. Работает параллельно T20, не меняет Go-agent |
+| T22 | Production live приёмка A→заметка→рестарт→новый диалог B, видео и сдача | T20, T21 | Обычный cmd/paper-scout + Flutter + реальные DeepSeek/arXiv/Ollama; A не названа в новом вопросе, B другая работа; заметка учтена, ссылки A/B проверены, три утверждения сверены; write/NOOP/исправление/exclusion не сбрасываются рестартом/backfill; note edit/clear и аккаунт B; отдельное видео research-memory-demo.mp4; README/runbook/evidence обновлены. Критерии research-memory.md обязательны |
+
+Каждая нода сохраняет два review/fix, отдельное упрощение, итоговый контроль и
+serialized merge. До завершения T22 новая продуктовая приёмка не закрыта.

@@ -114,3 +114,7 @@ HTTP admission запускает AgentRunner в фоне; polling, атомар
 Точные поля coverage, семантика снимков и повторяемые проверки:
 [research-api.md](research-api.md). Фактические результаты:
 [verification/T12.md](verification/T12.md).
+
+## Память исследований — контракт продолжения
+
+В T19 добавляются authenticated POST /api/v1/research-memory/search и GET/PATCH /api/v1/research-memory/{memory_id}; PATCH выполняет explicit correction или exclusion с expected_revision, owner берётся только из auth. T20 добавляет memory_recalled и optional research_memory в existing Report: retrieval_mode, reasons, recalled, referenced. Точные JSON и происхождение источников — [research-memory.md](research-memory.md). Memory содержит atomic claim cards с facet/evidence/analysis и версионированные user corrections/exclusions. Из reports/analyses восстанавливается базовая память; rebuild сохраняет пользовательские поправки. Отдельная исходная сущность отчёта не создаётся.

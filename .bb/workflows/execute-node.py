@@ -111,6 +111,8 @@ Every filesystem mutation and build must target THIS worktree, never the root ch
 Read AGENTS.md and docs/execution-protocol.md in this worktree.
 Read the assigned row of docs/implementation-dag.md and relevant requirements, architecture,
 agent-harness, hybrid-rag, api-and-data and acceptance-and-demo docs before working.
+For memory extension nodes T19-T22, docs/research-memory.md and docs/memory-approaches.md
+are mandatory acceptance/contracts. They supersede earlier single-dialog memory scope.
 Current execution graph at dispatch: {json.dumps(data['graph'], ensure_ascii=False)}
 All declared dependencies have been merged into the base SHA. Do only this node, not its successors.
 No agent libraries, no unit/widget tests. Integration checks are permitted. Device UI uses claude-in-mobile.
