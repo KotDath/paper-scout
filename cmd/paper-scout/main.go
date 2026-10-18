@@ -14,7 +14,9 @@ import (
 
 	"paper-scout/internal/auth"
 	"paper-scout/internal/config"
+	"paper-scout/internal/embeddings"
 	"paper-scout/internal/httpapi"
+	"paper-scout/internal/retrieval"
 	"paper-scout/internal/store"
 )
 
@@ -55,14 +57,27 @@ func run() error {
 	if err := os.MkdirAll(cfg.CacheDir, 0700); err != nil {
 		return err
 	}
+	embeddingConfig, err := embeddings.ConfigFromEnv()
+	if err != nil {
+		return err
+	}
+	preflight, cancelEmbedding := context.WithTimeout(ctx, 10*time.Second)
+	embeddingClient, embeddingErr := embeddings.New(preflight, embeddingConfig)
+	cancelEmbedding()
+	if embeddingErr != nil {
+		// Dependency failures permit explicit lexical-only reads. Recreate the client
+		// after restoring Ollama; no secrets or provider response bodies are logged.
+		slog.Warn("embedding preflight failed; retrieval is lexical_only until restart")
+	}
+	retrievalService := retrieval.New(db.DB, embeddingClient)
 	listener, err := net.Listen("tcp", cfg.HTTPAddr)
 	if err != nil {
 		return err
 	}
 	defer listener.Close()
 	server := &http.Server{
-		Handler: httpapi.New(db), ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout: 15 * time.Second, WriteTimeout: 15 * time.Second,
+		Handler: httpapi.New(db, retrievalService), ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout: 15 * time.Second, WriteTimeout: 130 * time.Second,
 		IdleTimeout: 60 * time.Second, MaxHeaderBytes: 1 << 20,
 	}
 	done := make(chan error, 1)

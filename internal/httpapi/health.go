@@ -7,11 +7,12 @@ import (
 	"os/exec"
 	"time"
 
+	"paper-scout/internal/retrieval"
 	"paper-scout/internal/store"
 )
 
 // New returns health and authenticated API routes.
-func New(db *store.Store) *http.ServeMux {
+func New(db *store.Store, services ...*retrieval.Service) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
@@ -33,6 +34,11 @@ func New(db *store.Store) *http.ServeMux {
 		writeJSON(w, code, map[string]any{"status": status, "checks": checks})
 	})
 	registerAuth(mux, db)
+	service := retrieval.New(db.DB, nil)
+	if len(services) > 0 && services[0] != nil {
+		service = services[0]
+	}
+	RegisterRetrieval(mux, db, service)
 	return mux
 }
 
