@@ -34,9 +34,9 @@ def role_result(output, stage):
     if not isinstance(value, dict):
         raise ValueError("Role result must be an object")
     if value.get("stage") != stage:
-        raise RuntimeError(f"Expected stage {stage}, got {value.get('stage')}")
+        raise ValueError(f"Expected stage {stage}, got {value.get('stage')}")
     if value.get("status") not in {"ready", "approved", "changes_requested", "blocked"}:
-        raise RuntimeError("Role returned unknown status")
+        raise ValueError("Role returned unknown status")
     return value
 
 
@@ -98,7 +98,7 @@ def main():
         command(["git", "worktree", "add", "-b", branch, str(worktree), base], root)
     if command(["git", "branch", "--show-current"], worktree) != branch:
         raise RuntimeError("Worktree branch mismatch")
-    ledger.update(node_id=node, branch=branch, worktree=str(worktree), base_sha=base)
+    ledger.update(node_id=node, branch=branch, worktree=str(worktree), base_sha=base, status="running")
     ledger.setdefault("threads", {})
     ledger.setdefault("stages", {})
     ledger.setdefault("dispatches", {})
