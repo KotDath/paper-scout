@@ -368,6 +368,20 @@ func run(runtime, envFile, artifact string) error {
 	if staleErr == nil || stale.Status != "partial" || stale.LastError != "source_changed" {
 		return errors.New("source changed during inference but index published ready")
 	}
+	checkChangedCounts := func(status retrieval.IndexStatus, indexed, total int) error {
+		var stored retrieval.IndexStatus
+		err := db.DB.QueryRowContext(ctx, `SELECT status,last_error,indexed_chunks,total_chunks FROM document_indexes WHERE document_id=?`, status.DocumentID).Scan(&stored.Status, &stored.LastError, &stored.IndexedChunks, &stored.TotalChunks)
+		if err != nil {
+			return err
+		}
+		if status.Status != "partial" || status.LastError != "source_changed" || status.IndexedChunks != indexed || status.TotalChunks != total || stored.Status != status.Status || stored.LastError != status.LastError || stored.IndexedChunks != indexed || stored.TotalChunks != total {
+			return fmt.Errorf("source_changed progress: returned %s/%s %d/%d, persisted %s/%s %d/%d; expected partial/source_changed %d/%d", status.Status, status.LastError, status.IndexedChunks, status.TotalChunks, stored.Status, stored.LastError, stored.IndexedChunks, stored.TotalChunks, indexed, total)
+		}
+		return nil
+	}
+	if err = checkChangedCounts(stale, 0, len(docs[0].Chunks)); err != nil {
+		return err
+	}
 	select {
 	case mutationErr := <-mutationError:
 		if mutationErr != nil {
@@ -383,7 +397,48 @@ func run(runtime, envFile, artifact string) error {
 		return err
 	}
 	fmt.Println("PASS model/encoding/chunking/input compatibility, partial progress, public-input cache reuse and overlapping evidence deduplication")
-	fmt.Println("PASS concurrent source mutation during actual inference cannot publish stale ready status")
+	// Add and remove a chunk while a missing original vector is being encoded.
+	// Counts must describe the current document, even when every remaining
+	// chunk already has a compatible vector after deletion.
+	for _, adding := range []bool{true, false} {
+		if _, err = db.DB.ExecContext(ctx, `DELETE FROM chunk_embeddings WHERE chunk_id=?`, docs[0].Chunks[0].ID); err != nil {
+			return err
+		}
+		mutationError := make(chan error, 1)
+		mutate := func() {
+			var mutationErr error
+			if adding {
+				_, mutationErr = db.DB.ExecContext(ctx, `INSERT INTO chunks SELECT 'concurrent_extra_evidence',document_id,998,text,char_start,char_end,page_start,page_end,section FROM chunks WHERE id=?`, docs[0].Chunks[1].ID)
+			} else {
+				_, mutationErr = db.DB.ExecContext(ctx, `DELETE FROM chunks WHERE id='concurrent_extra_evidence'`)
+			}
+			mutationError <- mutationErr
+		}
+		beforeEmbed.Store(&mutate)
+		changed, changedErr := service.Index(ctx, "owner_a", docs[0].ID)
+		if changedErr == nil {
+			return errors.New("chunk mutation during inference did not stop indexing")
+		}
+		select {
+		case mutationErr := <-mutationError:
+			if mutationErr != nil {
+				return mutationErr
+			}
+		default:
+			return errors.New("chunk mutation callback did not execute")
+		}
+		total := len(docs[0].Chunks)
+		if adding {
+			total++
+		}
+		if err = checkChangedCounts(changed, len(docs[0].Chunks), total); err != nil {
+			return err
+		}
+		if _, err = service.Index(ctx, "owner_a", docs[0].ID); err != nil {
+			return err
+		}
+	}
+	fmt.Println("PASS concurrent title/add/delete mutations: returned and persisted source_changed counters match current compatible inputs")
 	if err = scopeLimit(ctx, db, service, docs[0]); err != nil {
 		return err
 	}

@@ -26,9 +26,11 @@ from FTS and document encoding.
 
 FTS is populated for existing chunks during migration and maintained with
 insert/update/delete triggers, including public title updates. Changes invalidate
-stored readiness; the final ready write checks exact source inputs again in the
-same short transaction, so concurrent source changes cannot publish a stale index. Thus lexical
-retrieval remains available when embedding inference fails.
+stored readiness. Every progress write checks exact source inputs in the same
+short transaction. If inputs changed, it recomputes indexed/total counts from
+current compatible vectors, persists and returns those counts with
+`partial/source_changed`, and stops the attempt. This also prevents a stale
+ready write. Lexical retrieval remains available when embedding inference fails.
 
 Indexing encodes `DocumentText(title, section, text)` in batches of at most 32,
 using the T06 client with `truncate=false`. It stores normalized little-endian

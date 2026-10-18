@@ -57,12 +57,12 @@ func (s *Service) Index(ctx context.Context, userID, documentID string) (IndexSt
 		// execute more inference and never turns cancellation into successful indexing.
 		saveCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 2*time.Second)
 		defer cancel()
-		if err := s.saveStatus(saveCtx, status, identity, chunking); err != nil {
+		if err := s.saveStatus(saveCtx, &status, identity, chunking, items); err != nil {
 			return status, err
 		}
 		return status, cause
 	}
-	if err = s.saveStatus(ctx, status, identity, chunking); err != nil {
+	if err = s.saveStatus(ctx, &status, identity, chunking, items); err != nil {
 		return status, err
 	}
 	if len(items) == 0 {
@@ -112,12 +112,12 @@ func (s *Service) Index(ctx context.Context, userID, documentID string) (IndexSt
 			return finish(err)
 		}
 		status.IndexedChunks += len(batch)
-		if err = s.saveStatus(ctx, status, identity, chunking); err != nil {
+		if err = s.saveStatus(ctx, &status, identity, chunking, items); err != nil {
 			return finish(err)
 		}
 	}
 	status.Status = "ready"
-	if err = s.markReady(ctx, status, identity, chunking, items); err != nil {
+	if err = s.saveStatus(ctx, &status, identity, chunking, items); err != nil {
 		return finish(err)
 	}
 	return status, nil
@@ -147,9 +147,6 @@ type statusWriter interface {
 	ExecContext(context.Context, string, ...any) (sql.Result, error)
 }
 
-func (s *Service) saveStatus(ctx context.Context, status IndexStatus, id embeddings.Identity, chunking string) error {
-	return writeStatus(ctx, s.db, status, id, chunking)
-}
 func writeStatus(ctx context.Context, db statusWriter, status IndexStatus, id embeddings.Identity, chunking string) error {
 	_, err := db.ExecContext(ctx, `INSERT INTO document_indexes(document_id,model_id,model_digest,encoding_version,dimensions,chunking_version,indexed_chunks,total_chunks,status,last_error,updated_at)
  VALUES (?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(document_id) DO UPDATE SET model_id=excluded.model_id,model_digest=excluded.model_digest,encoding_version=excluded.encoding_version,dimensions=excluded.dimensions,chunking_version=excluded.chunking_version,indexed_chunks=excluded.indexed_chunks,total_chunks=excluded.total_chunks,status=excluded.status,last_error=excluded.last_error,updated_at=excluded.updated_at`, status.DocumentID, id.Model, id.Digest, id.EncodingVersion, id.Dimensions, chunking, status.IndexedChunks, status.TotalChunks, status.Status, status.LastError, time.Now().UTC().Format(time.RFC3339Nano))
@@ -171,47 +168,93 @@ func (s *Service) saveVectors(ctx context.Context, items []chunk, id embeddings.
 	return tx.Commit()
 }
 
-// Publish ready only if source inputs still match in the same short transaction.
-// A title/chunk change while inference was running must not overwrite the
-// invalidation trigger with a stale ready status.
-func (s *Service) markReady(ctx context.Context, status IndexStatus, id embeddings.Identity, chunking string, items []chunk) error {
+// Every progress write checks the source snapshot in the same transaction.
+// On mutation, replace counters from the old inference inputs with counts of
+// currently compatible vectors, and return that same status to the caller.
+func (s *Service) saveStatus(ctx context.Context, status *IndexStatus, id embeddings.Identity, chunking string, items []chunk) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
-	expected := make(map[string]chunk, len(items))
-	for _, c := range items {
-		expected[c.hit.EvidenceID] = c
-	}
-	rows, err := tx.QueryContext(ctx, `SELECT c.id,p.title,c.section,c.text,d.chunking_version FROM chunks c JOIN documents d ON d.id=c.document_id JOIN paper_versions p ON p.id=d.paper_version_id WHERE d.id=?`, status.DocumentID)
+	var title, currentChunking string
+	err = tx.QueryRowContext(ctx, `SELECT p.title,d.chunking_version FROM documents d JOIN paper_versions p ON p.id=d.paper_version_id WHERE d.id=?`, status.DocumentID).Scan(&title, &currentChunking)
 	if err != nil {
 		return err
 	}
-	matched := 0
+	changed := currentChunking != chunking
+	expected := make(map[string]string, len(items))
+	for _, c := range items {
+		expected[c.hit.EvidenceID] = c.hash
+		if c.chunking != currentChunking {
+			changed = true
+		}
+	}
+	current := make(map[string]string, len(items))
+	rows, err := tx.QueryContext(ctx, `SELECT id,section,text FROM chunks WHERE document_id=?`, status.DocumentID)
+	if err != nil {
+		return err
+	}
 	for rows.Next() {
-		var evidence, title, section, text, version string
-		if err = rows.Scan(&evidence, &title, &section, &text, &version); err != nil {
+		var evidence, section, text string
+		if err = rows.Scan(&evidence, &section, &text); err != nil {
 			rows.Close()
 			return err
 		}
-		c, ok := expected[evidence]
-		if !ok || version != c.chunking || inputHash(embeddings.DocumentText(title, section, text)) != c.hash {
-			rows.Close()
-			return errSourceChanged
+		hash := inputHash(embeddings.DocumentText(title, section, text))
+		current[evidence] = hash
+		if expected[evidence] != hash {
+			changed = true
 		}
-		matched++
 	}
 	err = rows.Err()
 	rows.Close()
 	if err != nil {
 		return err
 	}
-	if matched != len(items) {
-		return errSourceChanged
+	if len(current) != len(expected) {
+		changed = true
 	}
-	if err = writeStatus(ctx, tx, status, id, chunking); err != nil {
+	updated := *status
+	if changed {
+		updated.Status = "partial"
+		updated.LastError = "source_changed"
+		updated.TotalChunks = len(current)
+		updated.IndexedChunks = 0
+		rows, err = tx.QueryContext(ctx, `SELECT e.chunk_id,e.input_hash,e.vector_blob FROM chunk_embeddings e JOIN chunks c ON c.id=e.chunk_id WHERE c.document_id=? AND e.model_id=? AND e.model_digest=? AND e.encoding_version=? AND e.dimensions=? AND e.chunking_version=?`, status.DocumentID, id.Model, id.Digest, id.EncodingVersion, id.Dimensions, currentChunking)
+		if err != nil {
+			return err
+		}
+		counted := make(map[string]bool, len(current))
+		for rows.Next() {
+			var evidence, hash string
+			var blob []byte
+			if err = rows.Scan(&evidence, &hash, &blob); err != nil {
+				rows.Close()
+				return err
+			}
+			if current[evidence] == hash && !counted[evidence] {
+				if _, ok := readVector(blob); ok {
+					updated.IndexedChunks++
+					counted[evidence] = true
+				}
+			}
+		}
+		err = rows.Err()
+		rows.Close()
+		if err != nil {
+			return err
+		}
+	}
+	if err = writeStatus(ctx, tx, updated, id, currentChunking); err != nil {
 		return err
 	}
-	return tx.Commit()
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+	*status = updated
+	if changed {
+		return errSourceChanged
+	}
+	return nil
 }
