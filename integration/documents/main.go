@@ -42,15 +42,7 @@ func run(runtime string, live bool) error {
 		return err
 	}
 	defer func() { db.Close() }()
-	// T04 is a parallel DAG node, not a dependency of T05. Only its ID boundary
-	// is provisioned here; production T05 never creates catalog metadata entities.
-	if _, err = db.DB.ExecContext(ctx, `CREATE TABLE paper_versions (id TEXT PRIMARY KEY)`); err != nil {
-		return err
-	}
-	register := func(id string) error {
-		_, err := db.DB.ExecContext(ctx, `INSERT OR IGNORE INTO paper_versions(id) VALUES (?)`, id)
-		return err
-	}
+	register := func(id string) error { return registerFixture(ctx, db, id) }
 	if live {
 		s, err := documents.New(db.DB, documents.Config{CacheDir: filepath.Join(runtime, "cache")})
 		if err != nil {
@@ -82,13 +74,9 @@ func run(runtime string, live bool) error {
 				return err
 			}
 			defer pdfDB.Close()
-			if _, err = pdfDB.DB.ExecContext(ctx, `CREATE TABLE paper_versions (id TEXT PRIMARY KEY)`); err != nil {
-				return err
-			}
-			// A small public text PDF keeps this explicit probe within the
-			// normal 60-second budget on bandwidth-limited connections.
+			// A small public text PDF keeps the probe within the download budget.
 			source = documents.Source{PaperVersionID: "live-1301.3781v1", ArxivID: "1301.3781v1"}
-			if _, err = pdfDB.DB.ExecContext(ctx, `INSERT INTO paper_versions(id) VALUES (?)`, source.PaperVersionID); err != nil {
+			if err = registerFixture(ctx, pdfDB, source.PaperVersionID); err != nil {
 				return err
 			}
 			pdfService, err := documents.New(pdfDB.DB, documents.Config{CacheDir: filepath.Join(runtime, "pdf-cache"), HTTPClient: &http.Client{Transport: pdfOnlyTransport{}}})
@@ -108,6 +96,9 @@ func run(runtime string, live bool) error {
 		}
 		fmt.Printf("PASS: LIVE PDF network fetch %s (HTML intentionally bypassed for PDF probe when available); pages=%d runes=%d chunks=%d hash=%s warnings=%v\n", d.SourceURL, len(d.Segments), len([]rune(d.Text)), len(d.Chunks), d.ContentHash, d.Warnings)
 		return nil
+	}
+	if err := catalogDocuments(runtime); err != nil {
+		return err
 	}
 	var requests atomic.Int32
 	var unexpectedTarget atomic.Int32
@@ -480,4 +471,13 @@ func (pdfOnlyTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 		return nil, errors.New("HTML deliberately bypassed by live PDF probe")
 	}
 	return http.DefaultTransport.RoundTrip(r)
+}
+
+// Extraction/error fixtures seed complete metadata in the production T04 schema.
+// catalogDocuments separately exercises registration through the actual adapter.
+func registerFixture(ctx context.Context, db *store.Store, id string) error {
+	_, err := db.DB.ExecContext(ctx, `INSERT OR IGNORE INTO paper_versions
+ (id,arxiv_id,version,title,authors_json,abstract,abstract_url,html_url,pdf_url,published_at,updated_at,fetched_at)
+ VALUES (?,?,1,'Extraction fixture','[]','','','','','','','')`, id, id)
+	return err
 }
