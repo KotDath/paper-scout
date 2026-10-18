@@ -93,3 +93,13 @@ is synthetic. A forwarding loopback proxy injects only outage/race timing;
 healthy inference stays real. No dotenv, DeepSeek, unit/widget tests or device
 interaction. Contracts and exact results: `docs/research-memory.md`,
 `docs/verification/T19.md`. Use a new runtime directory for each invocation.
+
+T20 automatic memory integration: `python3 integration/agentmemory.py` builds and
+restarts the ordinary `cmd/paper-scout`, using real SQLite/auth/tools/Qwen3 and a
+clearly labeled Chat Completions HTTP fixture. It covers pre-model recall,
+content recall, snapshots/references, owner isolation, note edits/correction,
+cancellation, context budgets, capture failure/recovery and memory-off control.
+`python3 integration/agentmemory.py --live --env-file /path/to/shared/.env` also
+runs real DeepSeek on a fresh synthetic A/B corpus; only the Go child loads the
+file. `DEEPSEEK_MODEL` defaults to the existing runbook's `deepseek-flash` for this
+check. This is an integration smoke, not the real-article/UI acceptance in T22.

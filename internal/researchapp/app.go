@@ -12,13 +12,19 @@ import (
 
 	"paper-scout/internal/agent"
 	"paper-scout/internal/research"
+	"paper-scout/internal/researchmemory"
 	"paper-scout/internal/retrieval"
 	"paper-scout/internal/store"
 )
 
 var evidenceID = regexp.MustCompile(`ev_[A-Za-z0-9_]+`)
 
-func Attach(db *store.Store, runs *research.Service, runner *agent.AgentRunner, search *retrieval.Service) {
+func Attach(db *store.Store, runs *research.Service, runner *agent.AgentRunner, search *retrieval.Service, memories ...*researchmemory.Service) {
+	var memory *researchmemory.Service
+	if len(memories) > 0 {
+		memory = memories[0]
+		runner.WithResearchMemory(memory)
+	}
 	runs.SetExecutor(func(ctx context.Context, run store.Run) {
 		_, err := runner.RunWithFinalizer(ctx, run.UserID, run.ConversationID, run.ID, func(ctx context.Context, result agent.Result) error {
 			report, err := materialize(ctx, db, search, result)
@@ -34,6 +40,27 @@ func Attach(db *store.Store, runs *research.Service, runner *agent.AgentRunner, 
 		if err != nil {
 			// Log only server IDs and a fixed message; provider errors/results stay private.
 			slog.Warn("research worker stopped without completed report", "run_id", run.ID)
+		}
+		// Capture is separate from terminal/report commit. The T19 trigger has
+		// already queued recovery if this process dies or projection fails.
+		if memory != nil {
+			captureCtx, stop := context.WithTimeout(context.Background(), 5*time.Second)
+			saved, readErr := db.Run(captureCtx, run.UserID, run.ID)
+			if readErr == nil && saved.ReportID != nil {
+				projection, captureErr := memory.Capture(captureCtx, run.UserID, *saved.ReportID)
+				state := "captured"
+				if captureErr != nil {
+					state = "pending"
+				}
+				payload, _ := json.Marshal(map[string]any{"status": state, "processed": projection.Processed, "added": projection.Added, "noop": projection.Noop, "reasons": projection.Reasons})
+				eventCtx, finishEvent := context.WithTimeout(context.Background(), 3*time.Second)
+				if err := db.MemoryCaptureEvent(eventCtx, run.UserID, run.ID, payload); err != nil {
+					slog.Warn("memory capture diagnostic persistence failed", "run_id", run.ID)
+				}
+				finishEvent()
+				slog.Info("research memory write", "run_id", run.ID, "status", state, "processed", projection.Processed, "added", projection.Added, "noop", projection.Noop)
+			}
+			stop()
 		}
 		// Admission/persistence errors must not leave a queued run occupying capacity.
 		persist, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -127,6 +154,9 @@ func materialize(ctx context.Context, db *store.Store, search *retrieval.Service
 				report.Limitations = append(report.Limitations, "retrieval_"+state.Mode+": "+strings.Join(state.Reasons, ", "))
 			}
 		}
+	}
+	if err = materializeMemory(ctx, db, r.UserID, r.ID, &report); err != nil {
+		return report, err
 	}
 	report.Citations, err = json.Marshal(citations)
 	if err != nil {

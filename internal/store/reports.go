@@ -129,22 +129,29 @@ func (s *Store) RunSources(ctx context.Context, owner, run string) ([]ReportSour
 }
 
 type Report struct {
-	ID          string          `json:"id"`
-	RunID       string          `json:"run_id"`
-	Markdown    string          `json:"markdown"`
-	Citations   json.RawMessage `json:"citations"`
-	Sources     []ReportSource  `json:"sources"`
-	Coverage    json.RawMessage `json:"coverage"`
-	Limitations []string        `json:"limitations"`
-	CreatedAt   string          `json:"created_at"`
+	ResearchMemory *ResearchMemory `json:"research_memory"`
+	ID             string          `json:"id"`
+	RunID          string          `json:"run_id"`
+	Markdown       string          `json:"markdown"`
+	Citations      json.RawMessage `json:"citations"`
+	Sources        []ReportSource  `json:"sources"`
+	Coverage       json.RawMessage `json:"coverage"`
+	Limitations    []string        `json:"limitations"`
+	CreatedAt      string          `json:"created_at"`
 }
 
 func (s *Store) Report(ctx context.Context, owner, id string) (Report, error) {
 	var out Report
 	var citations, sources, coverage, limits string
-	err := s.DB.QueryRowContext(ctx, `SELECT id,run_id,markdown,citations_json,sources_json,coverage_json,limitations_json,created_at FROM reports WHERE id=? AND user_id=?`, id, owner).Scan(&out.ID, &out.RunID, &out.Markdown, &citations, &sources, &coverage, &limits, &out.CreatedAt)
+	var memory *string
+	err := s.DB.QueryRowContext(ctx, `SELECT id,run_id,markdown,citations_json,sources_json,coverage_json,limitations_json,created_at,research_memory_json FROM reports WHERE id=? AND user_id=?`, id, owner).Scan(&out.ID, &out.RunID, &out.Markdown, &citations, &sources, &coverage, &limits, &out.CreatedAt, &memory)
 	if err != nil {
 		return out, notFound(err)
+	}
+	if memory != nil {
+		if err = json.Unmarshal([]byte(*memory), &out.ResearchMemory); err != nil {
+			return out, err
+		}
 	}
 	out.Citations = json.RawMessage(citations)
 	out.Coverage = json.RawMessage(coverage)
@@ -188,7 +195,11 @@ func (s *Store) CompleteReport(ctx context.Context, owner, run string, report Re
 		if err != nil {
 			return err
 		}
-		_, err = tx.ExecContext(ctx, `INSERT INTO reports(id,user_id,run_id,markdown,citations_json,sources_json,coverage_json,limitations_json,created_at) VALUES(?,?,?,?,?,?,?,?,?)`, report.ID, owner, run, report.Markdown, string(report.Citations), string(sources), string(report.Coverage), string(limits), report.CreatedAt)
+		memory, err := json.Marshal(report.ResearchMemory)
+		if err != nil {
+			return err
+		}
+		_, err = tx.ExecContext(ctx, `INSERT INTO reports(id,user_id,run_id,markdown,citations_json,sources_json,coverage_json,limitations_json,created_at,research_memory_json) VALUES(?,?,?,?,?,?,?,?,?,?)`, report.ID, owner, run, report.Markdown, string(report.Citations), string(sources), string(report.Coverage), string(limits), report.CreatedAt, string(memory))
 		if err != nil {
 			return err
 		}

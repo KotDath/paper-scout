@@ -223,7 +223,7 @@ func review1(ctx context.Context, db *store.Store, memory *researchmemory.Servic
 			{`INSERT INTO runs(id,user_id,conversation_id,client_request_id,request_message,status,created_at,budget_json) SELECT ?,user_id,?,?,request_message,status,created_at,budget_json FROM runs WHERE id='run_a'`, []any{run, conv, run}},
 			{`INSERT INTO run_sources SELECT ?,paper_version_id,selection_reason,analysis_status FROM run_sources WHERE run_id='run_a'`, []any{run}},
 			{`INSERT INTO paper_analyses SELECT ?,?,document_id,question,status,result_json,error_code,created_at,finished_at FROM paper_analyses WHERE id='analysis_a'`, []any{analysis, run}},
-			{`INSERT INTO reports SELECT ?,user_id,?,markdown,citations_json,sources_json,coverage_json,limitations_json,created_at FROM reports WHERE id='report_a'`, []any{report, run}},
+			{`INSERT INTO reports(id,user_id,run_id,markdown,citations_json,sources_json,coverage_json,limitations_json,created_at) SELECT ?,user_id,?,markdown,citations_json,sources_json,coverage_json,limitations_json,created_at FROM reports WHERE id='report_a'`, []any{report, run}},
 		}
 		for _, st := range statements {
 			if _, err = db.DB.ExecContext(ctx, st.sql, st.args...); err != nil {

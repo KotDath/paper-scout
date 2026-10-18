@@ -10,10 +10,12 @@ import (
 
 	"paper-scout/internal/deepseek"
 	"paper-scout/internal/research"
+	"paper-scout/internal/researchmemory"
 	"paper-scout/internal/store"
 )
 
 type AgentRunner struct {
+	memory   *researchmemory.Service
 	db       *store.Store
 	runs     *research.Service
 	client   *deepseek.DeepSeekClient
@@ -88,10 +90,24 @@ func (a *AgentRunner) RunWithFinalizer(ctx context.Context, owner, conversation,
 	hasUsefulResult := false
 	scope := Scope{Owner: owner, ConversationID: conversation, RunID: id}
 	repeats := map[[32]byte]int{}
+	if a.memory != nil {
+		if err := a.recall(runCtx, started, "question", started.RequestMessage); err != nil {
+			return a.finish(result, "failed", failureCode(err))
+		}
+	}
+	contentQuery := ""
+	contentRecalled := false
 	for {
 		if runCtx.Err() != nil {
 			code = failureCode(runCtx.Err())
 			break
+		}
+		if a.memory != nil && !contentRecalled && contentQuery != "" {
+			if err := a.recall(runCtx, started, "content", contentQuery); err != nil {
+				code = failureCode(err)
+				break
+			}
+			contentRecalled = true
 		}
 		messages, buildErr := (AgentSession{Store: a.db}).Context(runCtx, owner, conversation, id)
 		if buildErr != nil {
@@ -213,6 +229,9 @@ func (a *AgentRunner) RunWithFinalizer(ctx context.Context, owner, conversation,
 			}
 			if toolCode == "" {
 				hasUsefulResult = true
+				if a.memory != nil && !contentRecalled && contentQuery == "" && call.Function.Name == "analyze_paper" {
+					contentQuery = a.contentQuery(runCtx, owner, output)
+				}
 			}
 		}
 		if code == "" && budget.exhausted() {
