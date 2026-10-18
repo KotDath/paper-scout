@@ -71,16 +71,13 @@ func (a *Analyzer) Analyze(ctx context.Context, owner, runID, docID, question st
 			Packet           analysisPacket      `json:"article_data"`
 		}{question, d.ExtractionStatus, d.Warnings, p}
 		body, _ := json.Marshal(payload)
-		ids := []string{}
-		allowed := map[string]bool{}
-		for _, e := range p.Passages {
-			if !allowed[e.ID] {
-				ids = append(ids, e.ID)
-				allowed[e.ID] = true
-			}
+		// packetReader emits each canonical chunk at most once per packet.
+		ids := make([]string, len(p.Passages))
+		for j, e := range p.Passages {
+			ids[j] = e.ID
 		}
 		var obs *Observations
-		obs, err = a.step(ctx, owner, runID, out.ID, i, "reading", p, string(body), ids, allowed, complete)
+		obs, err = a.step(ctx, owner, runID, out.ID, i, "reading", p, string(body), ids, complete)
 		if err != nil {
 			return out, err
 		}
@@ -100,25 +97,16 @@ func (a *Analyzer) Analyze(ctx context.Context, owner, runID, docID, question st
 	if partCount >= a.cfg.MaxRequests {
 		return out, ErrAnalysisBudget
 	}
-	allowed := map[string]bool{}
-	ids := []string{}
-	for _, obs := range out.Observations {
-		for _, id := range cited(obs) {
-			if !allowed[id] {
-				ids = append(ids, id)
-				allowed[id] = true
-			}
-		}
-	}
+	ids := cited(out.Observations...)
 	synthesis, _ := json.Marshal(map[string]any{"question": question, "extraction_status": d.ExtractionStatus, "extraction_warnings": d.Warnings, "task": "Synthesize the following sequential reading observations. Preserve original evidence IDs, combine duplicate claims, keep limitations. Do not add facts unsupported by these observations.", "observations": out.Observations})
 	if len([]rune(string(synthesis))) > a.cfg.MaxSynthesisRunes {
 		return out, ErrAnalysisContext
 	}
-	out.Synthesis, err = a.step(ctx, owner, runID, out.ID, partCount, "synthesis", analysisPacket{}, string(synthesis), ids, allowed, complete)
+	out.Synthesis, err = a.step(ctx, owner, runID, out.ID, partCount, "synthesis", analysisPacket{}, string(synthesis), ids, complete)
 	return out, err
 }
 
-func (a *Analyzer) step(ctx context.Context, owner, runID, id string, ordinal int, kind string, p analysisPacket, body string, ids []string, allowed map[string]bool, complete BudgetedComplete) (*Observations, error) {
+func (a *Analyzer) step(ctx context.Context, owner, runID, id string, ordinal int, kind string, p analysisPacket, body string, ids []string, complete BudgetedComplete) (*Observations, error) {
 	if err := a.running(ctx, owner, runID); err != nil {
 		return nil, err
 	}
@@ -133,6 +121,10 @@ func (a *Analyzer) step(ctx context.Context, owner, runID, id string, ordinal in
 		if response.FinishReason != "stop" || len(response.Message.ToolCalls) > 0 {
 			err = errors.New("invalid_analysis")
 		} else {
+			allowed := make(map[string]bool, len(ids))
+			for _, id := range ids {
+				allowed[id] = true
+			}
 			obs, err = parseObservations(response.Message.Content, allowed)
 		}
 	}

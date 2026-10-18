@@ -122,32 +122,35 @@ func parseObservations(content *string, allowed map[string]bool) (*Observations,
 	if dec.Decode(&extra) != io.EOF || obs.Methods == nil || obs.Results == nil || obs.Limitations == nil {
 		return nil, errors.New("invalid_analysis")
 	}
-	claims := append(append(append([]Claim{}, obs.Methods...), obs.Results...), obs.Limitations...)
-	if len(claims) > 24 {
+	if len(obs.Methods)+len(obs.Results)+len(obs.Limitations) > 24 {
 		return nil, errors.New("invalid_analysis")
 	}
-	for _, c := range claims {
-		if strings.TrimSpace(c.Text) == "" || len([]rune(c.Text)) > 2000 || len(c.EvidenceIDs) == 0 || len(c.EvidenceIDs) > 8 {
-			return nil, errors.New("invalid_analysis")
-		}
-		for _, id := range c.EvidenceIDs {
-			if !allowed[id] {
-				return nil, errors.New("invalid_evidence")
+	for _, group := range [][]Claim{obs.Methods, obs.Results, obs.Limitations} {
+		for _, c := range group {
+			if strings.TrimSpace(c.Text) == "" || len([]rune(c.Text)) > 2000 || len(c.EvidenceIDs) == 0 || len(c.EvidenceIDs) > 8 {
+				return nil, errors.New("invalid_analysis")
+			}
+			for _, id := range c.EvidenceIDs {
+				if !allowed[id] {
+					return nil, errors.New("invalid_evidence")
+				}
 			}
 		}
 	}
 	return &obs, nil
 }
 
-func cited(obs Observations) []string {
+func cited(observations ...Observations) []string {
 	seen := map[string]bool{}
 	ids := []string{}
-	for _, group := range [][]Claim{obs.Methods, obs.Results, obs.Limitations} {
-		for _, claim := range group {
-			for _, id := range claim.EvidenceIDs {
-				if !seen[id] {
-					seen[id] = true
-					ids = append(ids, id)
+	for _, obs := range observations {
+		for _, group := range [][]Claim{obs.Methods, obs.Results, obs.Limitations} {
+			for _, claim := range group {
+				for _, id := range claim.EvidenceIDs {
+					if !seen[id] {
+						seen[id] = true
+						ids = append(ids, id)
+					}
 				}
 			}
 		}
