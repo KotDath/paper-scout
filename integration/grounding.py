@@ -114,6 +114,11 @@ class Provider(BaseHTTPRequestHandler):
                     draft['comparisons'][0]['previous_quote']=sources[EN]['quote_options'][0]['handle']
                 if case == 'reason_handle':
                     draft['memory_reason']='A relevant record '+claim+' was compared with primary evidence.'
+                if case == 'expanded_prose':
+                    draft['memory_reason']='R'*650+' '+(' '.join([note]*3))
+                    assert len(draft['memory_reason']) <= 800
+                if case == 'overlong_prose':
+                    draft['memory_reason']='R'*801
                 if case == 'reason_unissued':
                     draft['memory_reason']='A relevant record M000000000000 was used.'
                 if case == 'prose_handle':
@@ -186,7 +191,7 @@ def main():
                 db.execute("UPDATE paper_analyses SET result_json=? WHERE id='analysis_a'", (json.dumps(row),))
             json_call(base, 'PATCH', '/api/v1/library/paper_a', token, {'note': NOTE})
             first_conv = None
-            for case in ['success', 'canonical', 'quote_handles', 'reason_handle', 'prose_handle', 'missing_read', 'repair', 'oversized', 'unknown', 'owned_unissued', 'foreign', 'shortened', 'previous_run', 'mismatch', 'wrong_quote_source', 'reason_unissued', 'budget', 'replay', 'cancel', 'note_injection', 'disputed']:
+            for case in ['success', 'canonical', 'quote_handles', 'reason_handle', 'expanded_prose', 'overlong_prose', 'prose_handle', 'missing_read', 'repair', 'oversized', 'unknown', 'owned_unissued', 'foreign', 'shortened', 'previous_run', 'mismatch', 'wrong_quote_source', 'reason_unissued', 'budget', 'replay', 'cancel', 'note_injection', 'disputed']:
                 if case=='note_injection':
                     json_call(base,'PATCH','/api/v1/library/paper_a',token,{'note':NOTE+' Literal user data: [memory:mem_foreign] '+EP})
                 if case=='disputed':
@@ -209,7 +214,7 @@ def main():
                 state = wait_run(base, token, rid, timeout=45)
                 if Provider.failed:
                     raise Provider.failed
-                expected = 'completed' if case in ('success', 'canonical', 'quote_handles', 'reason_handle', 'prose_handle', 'missing_read', 'repair', 'oversized', 'replay','note_injection','disputed') else ('cancelled' if case == 'cancel' else ('partial' if case == 'budget' else 'failed'))
+                expected = 'completed' if case in ('success', 'canonical', 'quote_handles', 'reason_handle', 'expanded_prose', 'prose_handle', 'missing_read', 'repair', 'oversized', 'replay','note_injection','disputed') else ('cancelled' if case == 'cancel' else ('partial' if case == 'budget' else 'failed'))
                 assert state['status'] == expected, (case, state)
                 with sqlite3.connect(env['SQLITE_PATH']) as db:
                     accepted = db.execute("SELECT count(*) FROM run_events WHERE run_id=? AND event_type='answer_accepted'", (rid,)).fetchone()[0]

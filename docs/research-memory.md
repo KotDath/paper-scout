@@ -664,7 +664,8 @@ Notes выбираются по выданным M-handles и выводятся
 canonical report citations/referenced; текст пользовательской note не может
 создать научную ссылку. Известные issued identifiers в текстовых полях
 нормализуются точно как plain canonical IDs и сами по себе не считаются
-used/referenced. Чужой, невыданный или старый handle в prose тоже отклоняется.
+used/referenced. Prose limits применяются до exact ID expansion; итоговая
+нормализация отдельно ограничена max*8. Чужой, невыданный или старый handle в prose тоже отклоняется.
 
 Gate работает **до** completed/report finalizer. При первом invalid draft —
 точная диагностика с фактическими counts и одна repair-фаза. Rejected candidate

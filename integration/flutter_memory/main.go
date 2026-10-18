@@ -34,9 +34,13 @@ func mustJSON(v any) string { b, err := json.Marshal(v); must(err); return strin
 func main() {
 	dir := flag.String("runtime", "", "temporary directory in T21 worktree")
 	ui := flag.Bool("ui", false, "serve for claude-in-mobile instead of running Dart")
+	video := flag.Bool("video-fallbacks", false, "explicit T22 synthetic fallback scenes; requires --ui")
 	flag.Parse()
 	if *dir == "" {
 		panic("--runtime required")
+	}
+	if *video && !*ui {
+		panic("video-fallbacks requires --ui; not live research evidence")
 	}
 	ctx := context.Background()
 	db, err := store.Open(ctx, filepath.Join(*dir, "memory.sqlite"))
@@ -93,7 +97,10 @@ func main() {
 	// A second run makes retaining a manually selected older run observable.
 	_, err = db.DB.Exec(`INSERT INTO runs(id,user_id,conversation_id,client_request_id,request_message,status,created_at,budget_json) VALUES('run_b_newer','owner_a','conv_b','b-newer','T21 second run fixture','failed','2026-01-03T00:00:00Z','{}')`)
 	must(err)
-	handler := httpapi.New(db, retrieval.New(db.DB, encoder))
+	var handler http.Handler = httpapi.New(db, retrieval.New(db.DB, encoder))
+	if *video {
+		handler = videoFallbacks(ctx, db, handler)
+	}
 	var server *httptest.Server
 	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "GET" && strings.HasPrefix(r.URL.Path, "/api/v1/reports/report_") && r.URL.Path != "/api/v1/reports/report_a" {
