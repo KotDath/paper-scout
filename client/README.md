@@ -20,7 +20,9 @@ flutter run -d <emulator-id> --dart-define=API_BASE_URL=http://127.0.0.1:<api-po
 
 `API_BASE_URL` is a server origin with no API path, credentials, query or fragment;
 default: `http://127.0.0.1:8080`. The login screen also accepts a different address
-without rebuilding. Use an ephemeral API port for independent node checks.
+without rebuilding. This field is kept only in memory; after process restart it
+returns to the compile-time `API_BASE_URL`. Use an ephemeral API port for
+independent node checks.
 Local HTTP is enabled only in the debug Android manifest. Release builds require
 HTTPS; publishing and release signing are outside this local prototype.
 
@@ -42,3 +44,22 @@ python3 integration/flutter_client.py
 
 Device interactions during verification must use `claude-in-mobile`; adb is used
 only for installation, reverse networking and artifact operations.
+
+
+Verified API 35 emulator startup on this laptop (from the T13 worktree root,
+for the existing worktree-local `PaperScout_T13` AVD):
+
+```sh
+ANDROID_AVD_HOME="$PWD/.bb/runtime/t13/avd" QT_QPA_PLATFORM=xcb \
+  /home/kotdath/Android/Sdk/emulator/emulator -avd PaperScout_T13 \
+  -gpu host -feature -Vulkan -no-snapshot -no-audio -no-boot-anim \
+  -camera-back none -camera-front none -port 5582 -memory 2048 -cores 2
+```
+
+Keep an already running emulator available to other node roles. On this host,
+SwiftShader JIT triggered a SELinux `execheap` denial and emulator boot crashes;
+the host renderer works with SELinux Enforcing. Wait until `claude-in-mobile`
+reports `emulator-5582` as `device`, then install the APK and reverse the actual
+Go port. Use mobile app launch/restart and input/UI tools for the verification
+steps. The passed scenarios and exact artifact hash are in
+[T13 verification](../docs/verification/T13.md).
