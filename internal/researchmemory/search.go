@@ -346,26 +346,15 @@ func (s *Service) Search(ctx context.Context, owner string, req SearchRequest) (
 		decorate(h, oo)
 		return nil
 	}
-	for i := range out.LexicalCandidates {
-		if err = decorateHit(&out.LexicalCandidates[i]); err != nil {
-			return out, err
-		}
-	}
-	for i := range out.DenseCandidates {
-		if err = decorateHit(&out.DenseCandidates[i]); err != nil {
-			return out, err
-		}
-	}
-	for i := range out.LexicalCandidates {
-		if len(out.LexicalCandidates[i].Origins) > 5 {
-			out.LexicalCandidates[i].Origins = out.LexicalCandidates[i].Origins[:5]
-			out.Reasons = append(out.Reasons, "origin_budget")
-		}
-	}
-	for i := range out.DenseCandidates {
-		if len(out.DenseCandidates[i].Origins) > 5 {
-			out.DenseCandidates[i].Origins = out.DenseCandidates[i].Origins[:5]
-			out.Reasons = append(out.Reasons, "origin_budget")
+	for _, candidates := range [][]Hit{out.LexicalCandidates, out.DenseCandidates} {
+		for i := range candidates {
+			if err = decorateHit(&candidates[i]); err != nil {
+				return out, err
+			}
+			if len(candidates[i].Origins) > 5 {
+				candidates[i].Origins = candidates[i].Origins[:5]
+				out.Reasons = append(out.Reasons, "origin_budget")
+			}
 		}
 	}
 	used := 0

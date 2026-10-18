@@ -165,15 +165,13 @@ func (s *Service) get(ctx context.Context, tx *sql.Tx, owner, id string) (Entry,
 	if err != nil {
 		return out, err
 	}
-	oo, err := origins(ctx, tx, owner, id, SearchRequest{Before: time.Now().UTC()}, true)
+	originID := id
+	if out.Kind == "user_correction" {
+		originID = out.TargetID
+	}
+	oo, err := origins(ctx, tx, owner, originID, SearchRequest{Before: time.Now().UTC()}, true)
 	if err != nil {
 		return out, err
-	}
-	if out.Kind == "user_correction" {
-		oo, err = origins(ctx, tx, owner, out.TargetID, SearchRequest{Before: time.Now().UTC()}, true)
-		if err != nil {
-			return out, err
-		}
 	}
 	decorate(&out.Hit, oo)
 	rows, err := tx.QueryContext(ctx, `SELECT text,char_start,char_end FROM research_memory_passages WHERE memory_id=? ORDER BY ordinal`, id)

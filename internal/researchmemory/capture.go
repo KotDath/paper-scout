@@ -129,7 +129,7 @@ func (s *Service) Capture(ctx context.Context, owner, reportID string) (RefreshR
 		return out, err
 	}
 	base := Origin{ReportID: reportID, RunID: run, ConversationID: conv, CreatedAt: created, Status: status, Coverage: json.RawMessage(coverage), Limitations: limitations, EvidenceIDs: []string{}}
-	episode := Hit{Kind: "episode", Facet: reportID, Title: title, Text: question + "\n\n" + markdown, ContentHash: hash(question + "\n\n" + markdown)}
+	episode := Hit{Kind: "episode", Facet: reportID, Title: title, Text: question + "\n\n" + markdown}
 	// Bounded report passages retain Unicode coordinates and expose truncation.
 	if utf8.RuneCountInString(episode.Text) > 64*PassageRunes {
 		out.Reasons = append(out.Reasons, "episode_projection_truncated")
