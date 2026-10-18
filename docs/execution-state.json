@@ -219,6 +219,30 @@
         "Whole-merge git diff --check, Dart formatting and absence of tracked unit/widget test files: passed. No unit/widget tests created or run.",
         "Approved Android APK build and claude-in-mobile evidence retained in docs/verification/T13.md: startup, configured/fallback origin, invalid port, two accounts, logout, protected 401, network failure and app restart. APK build/device UI checks not repeated during integration; merge leaves approved Flutter sources unchanged. Research screens and full day-35 acceptance remain successor scope."
       ]
+    },
+    "T08": {
+      "status": "done",
+      "worktree": "/home/kotdath/omp/personal/ai/paper-scout-worktrees/T08",
+      "branch": "dag/t08",
+      "threads": {
+        "executor": "thr_4s86px95p8",
+        "reviewer": "thr_t6sdxwfb8w",
+        "simplifier": "thr_qbd5xmvjrc"
+      },
+      "base_sha": "bea14f91abb33b16c847d14e511e8f7d361e9f2d",
+      "approved_head_sha": "4c1283ec5f706ebda59b8908bc85052f3e36e40a",
+      "merge_sha": "fbbc5500314152ce5b829600f124fe726160b970",
+      "checks": [
+        "Pre-merge: main clean at expected bb56da61df3c2bc8359f3add895de0523bfaa93b; base bea14f91abb33b16c847d14e511e8f7d361e9f2d ancestor; dag/t08 and clean task worktree at approved 4c1283ec5f706ebda59b8908bc85052f3e36e40a. Both review/fix cycles, simplification and final reviewer approval confirmed; verify.patch matches complete approved diff after terminal-newline normalization.",
+        "git merge --no-ff dag/t08: passed; merge fbbc5500314152ce5b829600f124fe726160b970. Resolved ordinary composition conflicts in cmd/paper-scout/main.go and internal/httpapi/health.go: preserved run recovery/lifecycle routes, added optional retrieval injection to New/NewWithRuns and retained the 130-second retrieval write timeout. Independent worktrees preserved.",
+        "go build -mod=readonly -o .bb/runtime/t01/bin/ ./..., go vet -mod=readonly ./... and go mod verify: passed using root-local .bb/runtime/t01 caches with GOPROXY=off. No dependency changes.",
+        "integration/retrieval.py main(): passed with real local Ollama qwen3-embedding:0.6b (1024 dimensions), SQLite, document extraction and authenticated HTTP on a synthetic labeled corpus. Exact, paraphrased and Russian queries returned target evidence in top-8; BM25, cosine, RRF, both-account ownership, evidence access, explicit outage/partial degradation, compatibility, cache reuse, overlap deduplication and scope limits passed.",
+        "Retrieval integration: concurrent title/add/delete source changes returned and persisted correct source_changed counters; SQLite/HTTP reopen preserved membership, opaque sessions, vector cache, evidence and ranking. Sanitized evaluation artifact remains ignored at .bb/runtime/t08-integration/retrieval-evaluation.json.",
+        "integration/foundation.py, integration/accounts.py and integration/runs.py main(): passed against integrated Go HTTP/SQLite. Includes migrations/drift, FTS5/WAL, sanitized configuration, seed/auth/profile isolation, strict input, hashed credentials, durable run history/cancellation/idempotency/capacity, ownership and SIGKILL/startup recovery without implicit replay. Existing launchers redirected RUNTIME to root .bb/runtime/t01; ephemeral ports and temporary databases used.",
+        "Production main composition smoke: passed authenticated conversations plus live-hybrid library search in one server, unauthenticated search 401 and missing evidence 404; temporary SQLite and generated disposable credentials only.",
+        "gofmt, whole-merge git diff --check and absence of tracked unit/widget tests: passed. Unit/widget tests not created or run. Shared dotenv not read; no paid DeepSeek calls, push or deployment.",
+        "Flutter sources unchanged; analyze/device UI not repeated. Live retrieval uses synthetic article text; real arXiv articles, DeepSeek answers, full-reading analysis and end-to-end Flutter acceptance remain successor-node scope."
+      ]
     }
   }
 }
