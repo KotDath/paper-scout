@@ -22,6 +22,12 @@ abs/html/pdf URLs; it never requests a caller-supplied URL. Modern and legacy
 IDs retain an explicit version in persisted metadata. Versionless requests
 resolve to the actual version in the Atom ID or matching versioned links;
 missing/conflicting versions fail rather than silently assuming v1.
+Legacy `math`, `cs`, `nlin` and `q-bio` identifiers drop redundant subject-class
+suffixes before lookup or metadata comparison: `math.DG/0211159v1` becomes
+`math/0211159v1`. Bare IDs, prefixes and URLs therefore share the same canonical
+request cache key and persisted source identity. Other archives do not accept
+subject-class suffixes. This follows the
+[interacting-services identifier contract](https://info.arxiv.org/help/arxiv_identifier_for_services.html).
 
 `paper_versions` is the shared public metadata table, owned by migration
 `T04_arxiv.sql`. Its unique `(arxiv_id, version)` and deterministic `pv_` ID

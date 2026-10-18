@@ -96,6 +96,12 @@ func run(live bool, dbPath, endpoint string, expectCache bool) error {
 	counts := map[string]int{}
 	var starts []time.Time
 	var queries []string
+	legacyAliases := []struct{ alias, canonical string }{
+		{"math.DG/0211159", "math/0211159"},
+		{"cs.AR/0001002", "cs/0001002"},
+		{"nlin.AO/0201003", "nlin/0201003"},
+		{"q-bio.BM/0401004", "q-bio/0401004"},
+	}
 	redirectHits := 0
 	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Development tooling can probe listening ports with GET /. Only the
@@ -170,6 +176,13 @@ func run(live bool, dbPath, endpoint string, expectCache bool) error {
 		if strings.HasPrefix(query, "legacy") {
 			entryID = "hep-ex/0307015"
 		}
+		for _, legacy := range legacyAliases {
+			if key == legacy.canonical || key == legacy.canonical+"v1" {
+				// Return redundant class information in the ID but canonical
+				// links, exercising both metadata comparisons and persistence.
+				id, entryID = legacy.canonical+"v1", legacy.alias+"v1"
+			}
+		}
 		entry := fmt.Sprintf(`<entry><id>http://arxiv.org/abs/%s</id><title> Synthetic
  metadata </title><summary>Fixture abstract; not scientific evidence.</summary><author><name>A. Author</name></author><published>2023-01-01T00:00:00Z</published><updated>2023-01-02T00:00:00Z</updated><link href="http://arxiv.org/pdf/%s"/><link href="http://127.0.0.1/private"/></entry>`, entryID, id)
 		fmt.Fprint(w, `<feed xmlns="http://www.w3.org/2005/Atom">`+entry)
@@ -214,9 +227,35 @@ func run(live bool, dbPath, endpoint string, expectCache bool) error {
 	require(latest.Papers[0].ID == first.Papers[0].ID, "latest was not resolved")
 	legacy := search("legacy")
 	require(legacy.Papers[0].ArxivID == "hep-ex/0307015" && legacy.Papers[0].Version == 1, "legacy link version resolution failed")
+	for _, legacy := range legacyAliases {
+		resolved, err := client.Get(ctx, legacy.alias)
+		if err != nil {
+			return err
+		}
+		paper := resolved.Papers[0]
+		require(!resolved.CacheHit && paper.ArxivID == legacy.canonical && paper.Version == 1, "legacy alias not normalized in metadata")
+		for i, id := range []string{legacy.canonical, "https://arxiv.org/pdf/" + legacy.alias + "v1.pdf", "arXiv:" + legacy.canonical + "v1"} {
+			got, err := client.Get(ctx, id)
+			if err != nil {
+				return err
+			}
+			require(got.Papers[0].ID == paper.ID && got.Papers[0].Version == 1, "legacy aliases have different source identities")
+			require(got.CacheHit == (i != 1), "equivalent legacy request did not reuse its cache key")
+		}
+		var rows int
+		err = db.DB.QueryRow("SELECT COUNT(*) FROM paper_versions WHERE arxiv_id = ? AND version = 1", legacy.canonical).Scan(&rows)
+		if err != nil {
+			return err
+		}
+		require(rows == 1, "legacy alias created duplicate persisted source")
+		mu.Lock()
+		require(counts[legacy.canonical] == 1 && counts[legacy.canonical+"v1"] == 1 && counts[legacy.alias] == 0 && counts[legacy.alias+"v1"] == 0, "legacy API request was not canonicalized")
+		mu.Unlock()
+	}
+	fmt.Println("PASS: math/cs/nlin/q-bio aliases normalize before HTTP, metadata matching, cache keys and SQLite source identity")
 	_, err = client.Get(ctx, "2301.00002v1")
 	require(errors.Is(err, arxiv.ErrNotFound), "missing paper was not reported")
-	for _, id := range []string{"http://127.0.0.1/x", "https://arxiv.org.evil/abs/2301.00001v1", "https://arxiv.org:443/abs/2301.00001v1", "https://arxiv.org/abs/2301.00001v1?x=1", "https://arxiv.org/abs/../2301.00001v1", "2300.00001", "2301.00000", "2301.00001v0"} {
+	for _, id := range []string{"http://127.0.0.1/x", "https://arxiv.org.evil/abs/2301.00001v1", "https://arxiv.org:443/abs/2301.00001v1", "https://arxiv.org/abs/2301.00001v1?x=1", "https://arxiv.org/abs/../2301.00001v1", "2300.00001", "2301.00000", "2301.00001v0", "hep-th.DG/0211159"} {
 		_, err := client.Get(ctx, id)
 		require(err != nil, "unsafe/invalid identifier accepted")
 	}
@@ -257,7 +296,7 @@ func run(live bool, dbPath, endpoint string, expectCache bool) error {
 	if err != nil {
 		return err
 	}
-	require(count == 3, "version upsert duplicated sources")
+	require(count == 3+len(legacyAliases), "version upsert duplicated sources")
 	if err := db.Close(); err != nil {
 		return err
 	}

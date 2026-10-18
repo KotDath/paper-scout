@@ -66,7 +66,17 @@ func ParseID(raw string) (Identifier, error) {
 	if modern {
 		date, sequence, _ = strings.Cut(id.ArxivID, ".")
 	} else {
-		_, digits, _ := strings.Cut(id.ArxivID, "/")
+		archive, digits, _ := strings.Cut(id.ArxivID, "/")
+		if base, _, hasClass := strings.Cut(archive, "."); hasClass {
+			// These legacy archives permit redundant subject classes. arXiv's
+			// API and preferred external identifiers use the archive alone.
+			switch base {
+			case "math", "cs", "nlin", "q-bio":
+				id.ArxivID = base + "/" + digits
+			default:
+				return Identifier{}, bad
+			}
+		}
 		date, sequence = digits[:4], digits[4:]
 	}
 	month, _ := strconv.Atoi(date[2:])
