@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'auth/auth_controller.dart';
 import 'api/api_client.dart';
+import 'research/workspace.dart';
 
 void main() => runApp(const PaperScoutApp());
 
@@ -47,7 +48,7 @@ class _PaperScoutAppState extends State<PaperScoutApp>
       listenable: auth,
       builder: (context, _) => auth.user == null
           ? LoginScreen(auth: auth)
-          : AccountScreen(key: ValueKey(auth.user!.id), auth: auth),
+          : ResearchWorkspace(key: ValueKey(auth.user!.id), auth: auth),
     ),
   );
 }
@@ -168,50 +169,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ],
           ),
-        ),
-      ),
-    ),
-  );
-}
-
-class AccountScreen extends StatelessWidget {
-  const AccountScreen({super.key, required this.auth});
-  final AuthController auth;
-
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Paper Scout')),
-    body: Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 600),
-        child: ListView(
-          padding: const EdgeInsets.all(24),
-          children: [
-            const Icon(Icons.account_circle_outlined, size: 56),
-            const SizedBox(height: 16),
-            Text(
-              'Аккаунт: ${auth.user!.login}',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Вы вошли в Paper Scout. Ваши данные доступны только в вашем аккаунте.',
-            ),
-            const SizedBox(height: 24),
-            if (auth.error != null) ErrorMessage(auth.error!),
-            OutlinedButton.icon(
-              onPressed: auth.busy ? null : auth.refresh,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Проверить сессию'),
-            ),
-            const SizedBox(height: 12),
-            FilledButton.icon(
-              onPressed: auth.busy ? null : auth.logout,
-              icon: const Icon(Icons.logout),
-              label: const Text('Выйти и сменить аккаунт'),
-            ),
-            if (auth.busy) const LinearProgressIndicator(),
-          ],
         ),
       ),
     ),

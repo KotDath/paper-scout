@@ -42,6 +42,7 @@ var ctx = context.Background()
 
 func main() {
 	runtime := flag.String("runtime", "", "temporary directory in this worktree")
+	clientCheck := flag.String("client-check", "", "T14 Dart or device UI integration: dart|ui")
 	api := flag.Bool("api", false, "exercise composed authenticated research HTTP API")
 	live := flag.Bool("live", false, "real arXiv, DeepSeek and Ollama")
 	allowPartial := flag.Bool("allow-partial", false, "live tool smoke only: permit honestly labeled partial analysis with a validated reading prefix")
@@ -103,6 +104,11 @@ func main() {
 	limits.OutputTokens = 2048
 	runner, err := agent.New(db, runs, client, registry, limits)
 	must(err)
+	if *clientCheck != "" {
+		check(!*api && (!*live || *clientCheck == "ui"), "client-check live requires ui and cannot combine with api")
+		verifyFlutterClient(*clientCheck, db, runs, runner, search)
+		return
+	}
 	if *api {
 		check(!*allowPartial, "API verification does not accept allow-partial")
 		verifyAPI(*runtime, db, runs, runner, search, *live, *artifact, embed.Identity())
