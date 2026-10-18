@@ -47,6 +47,29 @@
         "Existing live DeepSeek evidence retained: three successful requests, calculator exchange, 760 total tokens; paid calls not repeated. Thinking-enabled mode and provider failures remain fixture-only checks.",
         "Flutter unchanged; analyze and device interaction outside this node scope."
       ]
+    },
+    "T02": {
+      "status": "done",
+      "worktree": "/home/kotdath/omp/personal/ai/paper-scout-worktrees/T02",
+      "branch": "dag/t02",
+      "threads": {
+        "executor": "thr_h7nrbiiqga",
+        "reviewer": "thr_wy9kjgv2b9",
+        "simplifier": "thr_wh4a86baw5"
+      },
+      "base_sha": "01131aba83491b196e75ace742625a2fad0c1d57",
+      "approved_head_sha": "a544c8e5f7b02ba64fbe2a2ab08919119d08bf6a",
+      "merge_sha": "bd55bb9625f575de3e429d079267f6e35c623066",
+      "checks": [
+        "Pre-merge: main clean at expected 33c6fae4154829403e419a0ba25965eb5b210116; base ancestor; dag/t02 and clean worktree at approved a544c8e5f7b02ba64fbe2a2ab08919119d08bf6a; two reviews, simplification and final approval confirmed; verify.patch matches approved diff.",
+        "git merge --no-ff dag/t02: passed without conflicts; merge bd55bb9625f575de3e429d079267f6e35c623066; independent worktrees preserved.",
+        "go build -mod=readonly ./... and go vet -mod=readonly ./...: passed with root-worktree-local caches and GOPROXY=off.",
+        "go mod verify: all modules verified. Dependency download timed out after 45 seconds; exact crypto v0.58.0 and sys v0.49.0 cache entries copied read-only from T02 into root runtime, then checksum verification passed.",
+        "integration/accounts.py main(): passed with runtime redirected to existing root t01 cache; real HTTP/SQLite, atomic idempotent two-account seed, bcrypt, login/me, isolated profiles, owner injection rejection, concurrent reads, strict inputs, hashed token storage, logout, expiry, restart/persistence and no plaintext credentials in database.",
+        "integration/foundation.py main(): passed; real server HTTP/SQLite, FTS5/BM25, concurrent readiness, WAL, private database, restart/persistence, migration drift, extraction-tool readiness and sanitized configuration; ephemeral ports and temporary databases.",
+        "gofmt and git diff --check: passed; no tracked unit/widget tests added or run.",
+        "Flutter unchanged; analyze and device interaction outside T02 scope. Shared dotenv not read and no paid provider calls made."
+      ]
     }
   }
 }
