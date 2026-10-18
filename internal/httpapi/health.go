@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"paper-scout/internal/research"
+	"paper-scout/internal/researchmemory"
 	"paper-scout/internal/retrieval"
 	"paper-scout/internal/store"
 )
@@ -47,6 +48,7 @@ func NewWithRuns(db *store.Store, runs *research.Service, services ...*retrieval
 		service = services[0]
 	}
 	RegisterRetrieval(mux, db, service)
+	RegisterResearchMemory(mux, db, researchmemory.New(db.DB, service.EmbeddingClient()))
 	return mux
 }
 

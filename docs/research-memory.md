@@ -1,8 +1,9 @@
 # Память между исследованиями
 
-Статус: выбранный после исследования план следующего результата после T18.
+Статус: T19 реализует хранилище, capture/consolidation, hybrid search и HTTP;
+автоматическое подключение к агенту, Flutter и новая сквозная приёмка — T20–T22.
 Пользователь попросил сначала изучить подходы долговременной памяти; выбор обоснован в
-[memory-approaches.md](memory-approaches.md). Реализация ещё не выполнена.
+[memory-approaches.md](memory-approaches.md). Полный пользовательский сценарий ещё не реализован.
 Прежняя сдача дня 35 остаётся историческим результатом.
 
 ## Пользовательский результат
@@ -267,3 +268,233 @@ README/runbook/acceptance обновляются по фактическим р�
 
 Каждая нода: worktree/ветка, исполнитель, два review/fix, отдельный упрощатель,
 итоговый контроль и сериализованное слияние по прежнему execution-protocol.
+
+
+## Реализованный Go/HTTP-контракт T19
+
+Исходные определения: `internal/researchmemory/types.go`. Конструктор
+`New(db *sql.DB, embed *embeddings.EmbeddingClient) *Service`; nil encoder
+означает явный `lexical_only`. Используется существующий pinned клиент Qwen3,
+дополнительного клиента генерации нет. `httpapi.NewWithRuns` регистрирует память
+с тем же encoder, что передан существующему retrieval; `RegisterResearchMemory`
+поддерживает самостоятельно составленные серверы. Обычный cmd получает эти
+маршруты через существующий NewWithRuns. AgentRunner и Flutter в T19 не меняются.
+
+Экспортируемые операции (все принимают `context.Context` первым аргументом):
+
+| Операция | Остальные аргументы | Результат |
+| --- | --- | --- |
+| `Capture` | `owner, reportID string` | `(RefreshResult, error)` — атомарная проекция одного persisted completed/partial отчёта |
+| `Refresh` | `owner string` | `(RefreshResult, error)` — максимум 16 изменённых notes и 2 reports |
+| `Rebuild` | `owner string` | `error` — только requeue reports этого владельца, затем bounded Refresh; user-данные и IDs сохраняются |
+| `Index` | `owner string, req SearchRequest` | `(IndexResult, error)` — максимум 32 passages / один document batch |
+| `Search` | `owner string, req SearchRequest` | `(SearchResult, error)` — Refresh + Index + query inference + свежий согласованный SQL snapshot |
+| `Get` | `owner, memoryID string` | `(Entry, error)` — текущая запись, passages, annotations, provenance |
+| `Patch` | `owner, memoryID string, p Patch` | `(Entry, error)` — explicit correction либо exclude/restore |
+
+`SearchRequest` имеет `Query string`, `Limit int` (0=5, иначе 1..5), а также
+серверные `ExcludeRunID string`, `Before time.Time` с `json:"-"`. Они запрещены
+в HTTP body вместе с любыми неизвестными полями. T20 передаёт текущий run ID и
+время создания run: будущие origins/notes/corrections исключаются. Если Before
+не задан, используется время после bounded Refresh. Capture ставит timestamp
+эпизода/claim по времени исходного отчёта, а не позднего backfill. При правке
+время текущей ревизии меняется; исторический cutoff не получает будущую правку.
+
+`Hit` содержит все поля JSON-примера выше; `facet` выдаётся только для claim.
+Дополнительные поля: `target_id` для user_correction, `origins []Origin`,
+`char_start/char_end` (Unicode, полуинтервал в memory text), `bm25`, `cosine`.
+`content_hash` — SHA-256 полного актуального текста записи; для claim текст
+нормализован по whitespace. Passage имеет свой внутренний hash точного
+embedding input. Короткий passage и полный memory text не отождествляются.
+`authority` = `model` для claims, `research_history` для эпизода, `user` для
+notes/corrections. Ни одно значение не обозначает доказанную научную истину.
+
+`Origin` содержит `report_id`, `run_id`, `conversation_id`, `created_at`,
+`status` исходного run; для научной карточки — `analysis_id`, `document_id`,
+`paper_version_id`, `analysis_status`, `extraction_status`, `evidence_ids`.
+`coverage` — сохранённая JSON-проекция фактических диапазонов/статуса/warnings,
+`limitations []string` — ограничения отчёта. Для эпизодов origins также
+перечисляют статьи и их coverage. Evidence проверяется по существующему chunk
+и document при capture и чтении, generated Markdown evidence не становится.
+Документы/статьи/отчёты остаются прежними сущностями и IDs. Кэш-пути, provider
+payloads, input_json и reasoning в память/API не проецируются.
+
+`SearchResult` возвращает `query`, `retrieval_mode`, `reasons []string`,
+`hits []Hit`, диагностические `lexical_candidates []Hit`, `dense_candidates
+[]Hit`, `index_coverage float64`, `refresh RefreshResult`. Массивы не null.
+`RefreshResult`: `processed`, `added`, `noop`, `pending` (int), `reasons`.
+`IndexResult`: `attempted`, `published` (int), `reasons`. Coverage индекса
+описывает совместимые векторы в текущем разрешённом scope, а не чтение модели.
+Для пустой памяти coverage=0; успешный query inference всё равно проверяет
+Ollama, а отсутствие данных не подменяет сбой зависимости.
+
+Обе ветки выбирают до 20 passages с owner/cutoff/exclusion фильтрами **до**
+top-k. Exact cosine, затем RRF `1/(60+rank)`, устойчивый tie-break по memory ID
+и координате. Search ограничен 20000 разрешённых passages; превышение —
+`ErrScope` / HTTP400 `memory_scope_limit`, без молчаливого усечения scope.
+Origins одной карточки читаются с явным пределом 64 (превышение тоже ErrScope).
+В контекст допускаются до `limit` групп papers/reports и максимум 5 различных
+report origins. Notes/corrections добавляются по связи с найденными targets/
+papers; они могут увеличить длину hits сверх limit. Сумма **текстов** всех hits
+не больше 12000 Unicode-символов; T20 при форматировании должен дополнительно
+учесть metadata в общем бюджете prompt. Пустые/нерелевантные кандидаты не являются
+доказательством содержательной связи. Как в T08, cosine не имеет калиброванного
+порога релевантности; решение о научном сравнении требует исходных passages.
+
+Текущая note (до существующих 10000 символов) передаётся целиком, даже когда
+поиск выбрал лишь её passage. Сначала проверяется стоимость обязательных
+annotations: если группа вместе с ними не помещается, пропускается обычный hit,
+correction не обрезается и не скрывается. Это включает поправки к самим
+присоединённым user_note: сначала строится вся обязательная группа
+claim → note → correction, затем рассчитывается её бюджет. Причина пропуска
+слишком большой группы — `context_budget`. Поиск связей может просмотреть все
+origins консолидированного claim, чтобы найти поправку к пропущенному эпизоду.
+Каждая correction получает фактическое происхождение **своего target**, как при
+GET этой correction: report/run/conversation и evidence IDs другого найденного
+claim ей не приписываются. User_note и correction к ней не получают научные
+evidence/report origins, которых у личной заметки нет.
+
+После раскрытия всех обязательных annotations Search сначала резервирует
+первый (канонический, совпадающий с GET) origin каждой записи группы, затем
+заполняет оставшиеся места дополнительными действительными origins. Поправка
+к седьмому эпизоду вытесняет необязательный origin claim, сохраняя свой настоящий
+target. Публикуется только подмножество собственных origins каждой записи;
+report_id/conversation_id и evidence_ids вычисляются из этого подмножества.
+Существующие origins ранее опубликованных групп также входят в общий предел
+пяти разных reports. Если первичные origins всех обязательных поправок вместе
+с группой не помещаются, вся группа пропускается с `origin_budget`: поправка
+не скрывается и не получает выдуманное происхождение. GET продолжает показывать
+полное доступное происхождение target, включая не вошедшие в Search origins. Причины
+`capture_backlog`, `episode_projection_truncated`, `claim_projection_truncated`,
+`claim_evidence_unavailable`, `origin_budget`, `source_changed`,
+`index_incomplete_or_incompatible` и коды существующего EmbeddingClient явные.
+Индексирование ограничено одним batch на search; поэтому большой backlog даёт
+`hybrid_partial`, следующие вызовы продолжают его. Ошибка query inference —
+`lexical_only`. Сетевых вызовов внутри SQL-транзакций нет.
+
+`Entry` — поля Hit плюс `excluded bool`, `passages []Hit`, `annotations []Hit`.
+GET разрешает владельцу открыть исключённую запись и восстановить её. Старый
+эпизод показывает актуальные corrections в annotations, не меняя report text.
+При чтении исторического отчёта T20/T21 используют эту текущую проекцию;
+обычный GET /reports продолжает возвращать исходный immutable отчёт.
+
+`Patch{ExpectedRevision int, Excluded *bool, Correction *string}`:
+обязательна положительная revision и ровно одно действие. Correction — 1..4000
+Unicode-символов, не whitespace; текст сохраняется точно. Правка target создаёт
+или обновляет стабильную user_correction с target_id, отдельной revision и
+user authority; target получает `disputed` и новую revision. Старые снимки обеих
+записей остаются в research_memory_revisions. Повторная correction делается
+через **target ID** и его актуальную revision; PATCH самой correction запрещён
+(400), чтобы нельзя было скрыть её отдельно от disputed target. Exclude/restore
+также увеличивает target revision и сохраняет snapshot. Старая revision=409
+`revision_conflict`; чужой/несуществующий ID=404 `not_found`; нет сессии=401.
+Некорректный JSON/действие=400 `invalid_input`; сбой памяти=503
+`memory_unavailable`, а не пустая история. Если обязательная заметка ещё ждёт
+проекции (включая backlog после 16 note jobs или правку во время inference),
+возвращается `ErrPending` / HTTP503 `memory_pending`, retryable=true. Это также
+относится к устаревшей доступной владельцу note в GET/PATCH: состояние не
+выдаётся за отсутствие ресурса. Search не публикует claim без актуальной
+обязательной заметки; следующий bounded Refresh может завершить проекцию.
+Context/cancellation передаются всем
+операциям; сетевые вызовы используют существующие пределы EmbeddingClient.
+
+Проекция защищена консервативно: свободные episode passages пользователя не
+участвуют в recall после появления/изменения его note (включая очистку) либо
+при наличии другой disputed/excluded записи. Это защита на уровне owner:
+поздний отчёт с другим набором выбранных статей тоже может пересказать старую
+заметку/ошибочный claim. Только paper-фильтр не защищал бы от такого обхода.
+Сам disputed episode допустим вместе со своей correction; исходный свободный
+пересказ не может обойти исправление/forget через другой episode. Научные карточки с текущими annotations и исходный report остаются
+доступны. Exclude эпизода также исключает все его derived cards, включая
+консолидированные дубликаты из другого report. Correction эпизода присоединяется
+к его derived cards; correction отдельного claim применяется к тому же stable
+ID во всех origins. Это намеренное уменьшение recall, не semantic deletion.
+
+Миграция T19 создаёт durable jobs для существующих reports/notes. Report INSERT
+добавляет pending capture в той же исходной транзакции. Note INSERT/UPDATE
+синхронно сохраняет каждое явное изменение в owner-scoped note_history,
+увеличивает source generation и удаляет прежние passages/vectors. Даже серия
+правок до Refresh не теряет исходные пользовательские версии. Sync пишет
+актуальную memory revision; old text не попадает в текущий индекс. Publication
+embedding проверяет passage hash и revision после inference. Capture/rebuild
+не сбрасывает excluded/disputed, user corrections и историю notes.
+
+Bounded capture: до 32 analyses, 48 claims / 96000 суммарных символов, отдельный
+claim до 4000; episode до 64 passages по 1200 символов. Непоместившееся
+содержимое остаётся в исходном report/Analysis, а ограничение записывается в
+статус job и search.refresh.reasons. Synthesis имеет приоритет; иначе берутся
+только успешные reading segments, с объединением реальных диапазонов и partial.
+Claim без валидного evidence не индексируется. Точный NOOP не создаёт новую
+карточку, но сохраняет дополнительный origin нового исследования. Различающиеся
+claims разных статей не объединяются автоматически.
+
+Для T20: вызвать Capture после атомарного report commit; сбой памяти сохранить
+как ограничение, не терять report. Search сам восстанавливает пропущенный
+capture из jobs без DeepSeek. Автоматические точки recall, run snapshots,
+проверка `[memory:...]`, report.research_memory и public memory_recalled event
+остаются задачей T20. Для T21: использовать Entry/Patch и текущую revision;
+notes отделять от научных данных, origins открывать через существующие IDs.
+
+Проверки T19 и их границы: [verification/T19.md](verification/T19.md).
+
+## Итоговое видео всех функций (уточнение пользователя)
+
+Последнее явное указание пользователя: «после исправлений перезапиши видео где
+все фичи будут видны». Это расширяет T22 до нового полного пользовательского
+walkthrough и имеет приоритет над прежним узким роликом только A/B memory.
+Запись начинается после исправлений и успешного ревью/слияния T19–T21.
+Новых продуктовых функций в T19 это уточнение не добавляет.
+
+T22 использует обычный `cmd/paper-scout` и итоговый Flutter APK на эмуляторе.
+`integration/researchtools` не является основным сервером этой демонстрации.
+Основной исследовательский проход выполняется live с настоящими источниками,
+DeepSeek и Ollama. Результат — `artifacts/paper-scout-full-demo.mp4` и читаемый
+сценарий/таблица «функция → действие → ожидаемый результат → таймкод → supporting
+artifact». Старые `day35-demo.mp4` и исследовательские артефакты не
+перезаписываются. Новая полная запись становится основной ссылкой README/сдачи.
+
+До записи сопоставить чек-лист с фактически реализованными README, API и
+экранами. В итоговой матрице отмечать пункт показанным только при наличии
+соответствующей сцены/кадра; интеграционный лог сам по себе не заменяет видео.
+Минимальные сцены:
+
+1. Настройка адреса API, вход/выход, понятная ошибка неверного входа; профиль
+   интересов пользователя.
+2. Создание и история диалогов, исследовательский запрос, реальный поиск arXiv,
+   выбор/анализ источников, наблюдаемый прогресс, отчёт и usage/coverage.
+3. Полное чтение доступной статьи, предупреждения извлечения, источники/evidence,
+   координаты фрагментов и переход к оригиналу. Полный текст, индекс и RAG
+   показываются как разные характеристики, не как взаимозаменяемое доказательство.
+4. Уточняющий вопрос, настоящий BM25+Qwen3+RRF, цитаты; доступ к прошлому отчёту
+   во время выполняющегося follow-up; отмена активного запуска и возможность
+   продолжить работу.
+5. Библиотека и поиск, saved/read и личная заметка; сохранение этих данных после
+   перезапуска Go и Flutter.
+6. Новая память: создание semantic method/result/limitation записей из A;
+   заметка → рестарт → **новый диалог** с другой статьёй B без имени/ID A → агент
+   самостоятельно связывает A/B и использует note. Открытие прошлого отчёта и
+   исходных citations обеих работ. Recalled и referenced видны раздельно.
+7. Поправка записи, disputed/provenance/revision, исключение/восстановление;
+   влияние актуальной правки на последующий recall/ответ. Старый неверный текст
+   не возвращается как действующая память после rebuild/restart.
+8. Второй аккаунт: отдельные история, библиотека, профиль и память; чужих данных
+   нет.
+9. Реально реализованные пользовательские fallback/сбои: partial/abstract_only,
+   pending/недоступная память, lexical-only/недоступные embeddings, сеть/401.
+   Сначала составить точный перечень реализованных состояний, затем показать
+   доступные безопасные воспроизводимые сценарии. Основной исследовательский
+   проход остаётся live; если отдельный сбой требует fixture, явно обозначить
+   его и отделить от live-доказательства. Непоказанные состояния честно указать;
+   не заявлять «все фичи на видео» на основании одних интеграционных логов.
+
+Для записи применять `record-task-demo` с явным пользовательским
+переопределением Computer Use: **только claude-in-mobile** для всех UI-действий;
+adb допускается только для APK, reverse, screenrecord и transfer. Компьютерный
+Orca для Android не требуется. Не показывать credentials, private reasoning и
+другие окна; микрофон и звук выключены. Проверить рост файла во время записи,
+finally-stop, ffprobe, полное декодирование, визуальную читаемость начала/конца
+и всех ключевых сцен. При ускорении всего прохода явно подписать скорость;
+не скрывать неудачи склейками и не подставлять готовые ответы.
+
+Это требование к новой полной записи, а не переписыванию прежнего видео.
+Собственные Qwen3-интеграции T19 не являются будущей live/UI/video-проверкой.
