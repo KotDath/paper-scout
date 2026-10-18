@@ -25,6 +25,13 @@ String failure(Object error) {
       'run_capacity' => 'Сервер занят двумя исследованиями. Повторите позже.',
       'not_found' => 'Ресурс не найден или недоступен вашему аккаунту.',
       'scope_limit' => 'Слишком много фрагментов. Сузьте поиск до статьи.',
+      'revision_conflict' =>
+        'Запись уже изменена. Загрузите актуальную версию и повторите правку.',
+      'memory_pending' =>
+        'Память обновляется. Повторите загрузку через несколько секунд.',
+      'memory_unavailable' =>
+        'Память сейчас недоступна. Это не означает отсутствия истории.',
+      'memory_scope_limit' => 'Слишком много записей памяти. Сузьте запрос.',
       'invalid_input' => 'Проверьте длину и заполнение полей.',
       _ => error.message,
     };
@@ -78,6 +85,15 @@ class ResearchApi {
     'POST',
     '/api/v1/library/search',
     body: {'query': query, 'limit': 8},
+  );
+  Future<Json> memory(String id) =>
+      client.requestJson('GET', path('research-memory', id));
+  Future<Json> updateMemory(String id, Json patch) =>
+      client.requestJson('PATCH', path('research-memory', id), body: patch);
+  Future<Json> searchMemory(String query) => client.requestJson(
+    'POST',
+    '/api/v1/research-memory/search',
+    body: {'query': query, 'limit': 5},
   );
   Future<Json> profile() => client.requestJson('GET', '/api/v1/profile');
   Future<Json> updateProfile(String interests) => client.requestJson(

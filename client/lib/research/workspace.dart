@@ -4,6 +4,13 @@ import 'package:url_launcher/url_launcher.dart';
 import '../auth/auth_controller.dart';
 import 'conversation_controller.dart';
 import 'research_api.dart';
+import 'research_memory.dart';
+
+part 'memory_widgets.dart';
+
+typedef OpenResource =
+    void Function(String kind, String id, {String? memoryId});
+typedef ResourceTarget = (String, String, String?);
 
 String statusText(dynamic status) =>
     const {
@@ -81,7 +88,7 @@ class _ResearchWorkspaceState extends State<ResearchWorkspace> {
   late final api = ResearchApi(widget.auth.api);
   ConversationController? conversation;
   int tab = 0, revision = 0;
-  (String, String)? detail;
+  ResourceTarget? detail;
 
   void openConversation(String id) {
     conversation?.dispose();
@@ -92,9 +99,9 @@ class _ResearchWorkspaceState extends State<ResearchWorkspace> {
     });
   }
 
-  void open(String kind, String id) => setState(() {
+  void open(String kind, String id, {String? memoryId}) => setState(() {
     if (detail != null) _history.add(detail!);
-    detail = (kind, id);
+    detail = (kind, id, memoryId);
   });
 
   @override
@@ -113,6 +120,7 @@ class _ResearchWorkspaceState extends State<ResearchWorkspace> {
             api: api,
             kind: inner.$1,
             id: inner.$2,
+            memoryId: inner.$3,
             open: open,
           )
         : switch (tab) {
@@ -138,6 +146,7 @@ class _ResearchWorkspaceState extends State<ResearchWorkspace> {
             inner != null
                 ? switch (inner.$1) {
                     'reports' => 'Отчёт',
+                    'research-memory' => 'Память исследования',
                     'evidence' => 'Доказательный фрагмент',
                     _ => 'Статья',
                   }
@@ -191,7 +200,7 @@ class _ResearchWorkspaceState extends State<ResearchWorkspace> {
   }
 
   // Resource history stays in this account's widget tree, never in global routes.
-  final List<(String, String)> _history = [];
+  final List<ResourceTarget> _history = [];
   void back() => setState(() {
     if (detail != null) {
       detail = _history.isEmpty ? null : _history.removeLast();
@@ -316,7 +325,7 @@ class ConversationPane extends StatefulWidget {
     required this.open,
   });
   final ConversationController controller;
-  final void Function(String, String) open;
+  final OpenResource open;
   @override
   State<ConversationPane> createState() => _ConversationPaneState();
 }
@@ -494,6 +503,7 @@ class EventTile extends StatelessWidget {
           'index_progress': 'Индексация',
           'analysis_progress': 'Анализ текста',
           'retrieval_completed': 'Поиск по библиотеке',
+          'memory_recalled': 'Найдена память прошлых исследований',
           'tool_failed': 'Ошибка инструмента',
           'report_saved': 'Отчёт сохранён',
           'run_finished': 'Запуск завершён',
@@ -503,7 +513,9 @@ class EventTile extends StatelessWidget {
       title: Text('${event['seq']}. $label'),
       subtitle: p['retrieval_mode'] != null
           ? Text(
-              '${statusText(p['retrieval_mode'])}\nBM25: ${p['lexical_candidates']}, dense: ${p['dense_candidates']}',
+              type == 'memory_recalled'
+                  ? '${statusText(p['retrieval_mode'])}\nПередача в контекст не доказывает использование в ответе.'
+                  : '${statusText(p['retrieval_mode'])}\nBM25: ${p['lexical_candidates']}, dense: ${p['dense_candidates']}',
             )
           : p['covered_runes'] != null
           ? Text(
@@ -523,7 +535,7 @@ class EventTile extends StatelessWidget {
 class SourceCard extends StatelessWidget {
   const SourceCard({super.key, required this.source, required this.open});
   final Json source;
-  final void Function(String, String) open;
+  final OpenResource open;
   @override
   Widget build(BuildContext context) {
     final paper = source['paper'] as Json;
@@ -567,7 +579,7 @@ class SourceCard extends StatelessWidget {
 class LibraryPane extends StatefulWidget {
   const LibraryPane({super.key, required this.api, required this.open});
   final ResearchApi api;
-  final void Function(String, String) open;
+  final OpenResource open;
   @override
   State<LibraryPane> createState() => _LibraryPaneState();
 }
@@ -689,20 +701,27 @@ class ResourcePane extends StatefulWidget {
     required this.api,
     required this.kind,
     required this.id,
+    this.memoryId,
     required this.open,
   });
   final ResearchApi api;
   final String kind, id;
-  final void Function(String, String) open;
+  final String? memoryId;
+  final OpenResource open;
   @override
   State<ResourcePane> createState() => _ResourcePaneState();
 }
 
 class _ResourcePaneState extends State<ResourcePane> {
   Json? data;
+  Json? currentMemory;
+  ReportMemory? reportMemory;
+  String memoryError = '';
   String error = '', notice = '';
   bool busy = false, saved = false, read = false;
   final note = TextEditingController();
+  final correction = TextEditingController();
+  bool memoryNeedsReload = false;
   @override
   void initState() {
     super.initState();
@@ -712,6 +731,7 @@ class _ResourcePaneState extends State<ResourcePane> {
   @override
   void dispose() {
     note.dispose();
+    correction.dispose();
     super.dispose();
   }
 
@@ -719,20 +739,44 @@ class _ResourcePaneState extends State<ResourcePane> {
     setState(() {
       busy = true;
       error = '';
+      currentMemory = null;
+      memoryError = '';
     });
     try {
       final loaded = await switch (widget.kind) {
         'reports' => widget.api.report(widget.id),
         'evidence' => widget.api.evidence(widget.id),
+        'research-memory' => widget.api.memory(widget.id),
         _ => widget.api.paper(widget.id),
       };
+      final parsedMemory = widget.kind == 'reports'
+          ? ReportMemory.fromReport(loaded)
+          : null;
+      if (widget.kind == 'research-memory') {
+        MemoryHit.fromJson(loaded);
+      }
       if (!mounted) return;
       setState(() {
+        reportMemory = parsedMemory;
         data = loaded;
+        memoryNeedsReload = false;
         saved = loaded['saved'] == true;
         read = loaded['read'] == true;
         note.text = loaded['note'] as String? ?? '';
       });
+      if (widget.kind == 'reports' && widget.memoryId != null) {
+        try {
+          final entry = await widget.api.memory(widget.memoryId!);
+          if (mounted) {
+            setState(() {
+              currentMemory = entry;
+              memoryError = '';
+            });
+          }
+        } catch (e) {
+          if (mounted) setState(() => memoryError = failure(e));
+        }
+      }
     } catch (e) {
       if (mounted) setState(() => error = failure(e));
     } finally {
@@ -768,6 +812,144 @@ class _ResourcePaneState extends State<ResourcePane> {
     } finally {
       if (mounted) setState(() => busy = false);
     }
+  }
+
+  Future<void> patchMemory({bool? excluded}) async {
+    if (busy || memoryNeedsReload || data == null) return;
+    final text = correction.text;
+    if (excluded == null && (text.trim().isEmpty || text.runes.length > 4000)) {
+      setState(() => error = 'Введите поправку от 1 до 4000 символов.');
+      return;
+    }
+    setState(() {
+      busy = true;
+      error = '';
+      notice = '';
+    });
+    try {
+      final updated = await widget.api.updateMemory(widget.id, {
+        'expected_revision': data!['revision'],
+        if (excluded != null) 'excluded': excluded else 'correction': text,
+      });
+      if (!mounted) return;
+      setState(() {
+        data = updated;
+        notice = 'Изменение памяти сохранено. Исторические снимки не изменены.';
+        if (excluded == null) correction.clear();
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          error = failure(e);
+          // A stale revision or lost response requires a fresh GET, never an
+          // automatic write replay. Keep the draft for the user's next decision.
+          memoryNeedsReload = true;
+        });
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  List<Widget> memoryDetails(BuildContext context, Json d) {
+    final hit = MemoryHit.fromJson(d);
+    return [
+      heading(context, hit.title),
+      Text(memoryKind(hit)),
+      Text('${memoryState(hit)} · Ревизия ${hit.revision}'),
+      if (d['excluded'] == true)
+        const Text(
+          'Не используется в будущих исследованиях. Можно восстановить.',
+        ),
+      const Text(
+        'Актуальная запись. Прежний вывод модели и личное мнение не заменяют проверку статьи.',
+      ),
+      SelectableText(hit.text),
+      if (hit.json['paper_version_id'] case final String paperId)
+        TextButton(
+          onPressed: () => widget.open('papers', paperId),
+          child: const Text('Статья и личная заметка'),
+        ),
+      if (hit.targetId case final target?)
+        TextButton(
+          onPressed: () => widget.open('research-memory', target),
+          child: const Text('Запись, к которой относится поправка'),
+        ),
+      for (final origin in hit.origins) ...[
+        heading(context, 'Происхождение'),
+        Text(
+          'Создано: ${origin['created_at']} · ${statusText(origin['status'])}',
+        ),
+        if (origin['analysis_status'] != null)
+          Text('Анализ: ${statusText(origin['analysis_status'])}'),
+        if (origin['extraction_status'] != null)
+          Text('Извлечение: ${statusText(origin['extraction_status'])}'),
+        for (final limit in origin['limitations'] as List? ?? [])
+          Text('Ограничение: $limit'),
+        if (origin['report_id'] case final String reportId)
+          TextButton(
+            onPressed: () => widget.open('reports', reportId, memoryId: hit.id),
+            child: const Text('Открыть прошлый отчёт'),
+          ),
+        if (origin['paper_version_id'] case final String paperId)
+          TextButton(
+            onPressed: () => widget.open('papers', paperId),
+            child: const Text('Открыть исходную статью'),
+          ),
+        ExpansionTile(
+          title: const Text('Покрытие и идентификаторы происхождения'),
+          children: [
+            SelectableText(const JsonEncoder.withIndent('  ').convert(origin)),
+          ],
+        ),
+      ],
+      for (final id in hit.evidenceIds)
+        TextButton(
+          onPressed: () => widget.open('evidence', id),
+          child: Text('Исходный фрагмент: $id'),
+        ),
+      heading(context, 'Актуальные заметки и поправки'),
+      if (rows(d['annotations']).isEmpty)
+        const Text('Связанных заметок и поправок нет.'),
+      for (final annotation in ReportMemory.hits(d['annotations']))
+        MemoryCard(hit: annotation, open: widget.open),
+      if (hit.kind != 'user_correction') ...[
+        TextField(
+          controller: correction,
+          enabled: !busy && !memoryNeedsReload,
+          minLines: 2,
+          maxLines: 5,
+          maxLength: 4000,
+          decoration: const InputDecoration(
+            labelText: 'Явная поправка',
+            helperText:
+                'Оспаривает запись; исходный отчёт и статья сохраняются.',
+          ),
+        ),
+        FilledButton(
+          onPressed: busy || memoryNeedsReload ? null : () => patchMemory(),
+          child: const Text('Исправить'),
+        ),
+        OutlinedButton(
+          onPressed: busy || memoryNeedsReload
+              ? null
+              : () => patchMemory(excluded: d['excluded'] != true),
+          child: Text(
+            d['excluded'] == true
+                ? 'Восстановить использование'
+                : 'Не использовать',
+          ),
+        ),
+      ] else
+        const Text(
+          'Изменение или исключение поправки выполняется через исходную запись.',
+        ),
+      TextButton(
+        onPressed: busy ? null : load,
+        child: const Text('Загрузить актуальную ревизию'),
+      ),
+      if (notice.isNotEmpty) Semantics(liveRegion: true, child: Text(notice)),
+    ];
   }
 
   Future<void> launch(String value) async {
@@ -812,6 +994,7 @@ class _ResourcePaneState extends State<ResourcePane> {
         if (d != null)
           ...switch (widget.kind) {
             'reports' => report(context, d),
+            'research-memory' => memoryDetails(context, d),
             'evidence' => [
               heading(context, d['title'] as String),
               Text(coordinates(d)),
@@ -880,6 +1063,9 @@ class _ResourcePaneState extends State<ResourcePane> {
                         notice = '';
                       }),
               ),
+              const Text(
+                'Личная заметка — ваше мнение или предпочтение, а не научный факт. Она может использоваться в будущих исследованиях. Очистка убирает её из будущего поиска; прежние снимки запусков сохраняются.',
+              ),
               TextField(
                 controller: note,
                 enabled: !busy,
@@ -905,6 +1091,22 @@ class _ResourcePaneState extends State<ResourcePane> {
     const Text(
       'Ответ помощника. Утверждения проверяйте по исходным фрагментам.',
     ),
+    if (widget.memoryId != null) ...[
+      heading(context, 'Актуальное состояние памяти'),
+      const Text(
+        'Исторический отчёт сохранён без изменений. Ниже — текущие поправки к открытой записи.',
+      ),
+      if (memoryError.isNotEmpty) problem(memoryError, load),
+      if (currentMemory != null) ...[
+        MemoryCard(hit: MemoryHit.fromJson(currentMemory!), open: widget.open),
+        for (final annotation in ReportMemory.hits(
+          currentMemory!['annotations'],
+        ))
+          MemoryCard(hit: annotation, open: widget.open),
+      ],
+    ],
+    if (reportMemory case final memory?)
+      MemorySection(memory: memory, open: widget.open),
     for (final block in (d['markdown'] as String).split('\n\n'))
       Padding(
         padding: const EdgeInsets.symmetric(vertical: 6),
@@ -915,6 +1117,14 @@ class _ResourcePaneState extends State<ResourcePane> {
               : null,
         ),
       ),
+    if (reportMemory case final memory?)
+      for (final hit in memory.referenced.where(
+        (h) => (d['markdown'] as String).contains('[memory:${h.id}]'),
+      ))
+        TextButton(
+          onPressed: () => widget.open('research-memory', hit.id),
+          child: Text('[memory:${hit.id}] — ${hit.title}'),
+        ),
     heading(context, 'Ограничения отчёта'),
     for (final limit in d['limitations'] as List? ?? []) Text('• $limit'),
     heading(context, 'Источники и покрытие анализа'),
