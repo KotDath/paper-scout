@@ -41,6 +41,7 @@ func NewWithRuns(db *store.Store, runs *research.Service, services ...*retrieval
 	})
 	registerAuth(mux, db)
 	registerRuns(mux, db, runs)
+	registerReports(mux, db)
 	service := retrieval.New(db.DB, nil)
 	if len(services) > 0 && services[0] != nil {
 		service = services[0]

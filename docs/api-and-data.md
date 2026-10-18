@@ -106,3 +106,11 @@ Terminal states: `completed`, `partial`, `failed`, `cancelled`, `interrupted`. �
 События run: `run_started`, `search_started`, `papers_found`, `document_loaded`, `document_extracted`, `index_progress`, `analysis_progress`, `retrieval_completed`, `tool_failed`, `report_saved`, `run_finished`. Событие `retrieval_completed` содержит фактический режим и обе ветки; `analysis_progress` показывает покрытые части, а не выдуманный процент готовности модели.
 
 Пользовательские ошибки различают: `source_unavailable`, `text_unusable`, `embedding_unavailable`, `embedding_incompatible`, `provider_rate_limited`, `context_limit`, `budget_exceeded`, `run_interrupted`. Технические подробности находятся в локальных логах с run ID, без секретов.
+
+## Реализованный research API T12
+
+HTTP admission запускает AgentRunner в фоне; polling, атомарное сохранение
+отчёта/terminal status, owner-scoped отчёты, метаданные и библиотека реализованы.
+Точные поля coverage, семантика снимков и повторяемые проверки:
+[research-api.md](research-api.md). Фактические результаты:
+[verification/T12.md](verification/T12.md).

@@ -111,7 +111,14 @@ func registerRuns(mux *http.ServeMux, db *store.Store, runs *research.Service) {
 		if runError(w, err) {
 			return
 		}
-		writeJSON(w, 200, run)
+		sources, err := db.RunSources(r.Context(), user.ID, run.ID)
+		if runError(w, err) {
+			return
+		}
+		writeJSON(w, 200, struct {
+			store.Run
+			Sources []store.ReportSource `json:"sources"`
+		}{run, sources})
 	})
 	protect("GET /api/v1/runs/{id}/events", func(w http.ResponseWriter, r *http.Request) {
 		limit, after, ok := sequencePage(w, r)

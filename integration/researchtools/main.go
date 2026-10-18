@@ -42,6 +42,7 @@ var ctx = context.Background()
 
 func main() {
 	runtime := flag.String("runtime", "", "temporary directory in this worktree")
+	api := flag.Bool("api", false, "exercise composed authenticated research HTTP API")
 	live := flag.Bool("live", false, "real arXiv, DeepSeek and Ollama")
 	allowPartial := flag.Bool("allow-partial", false, "live tool smoke only: permit honestly labeled partial analysis with a validated reading prefix")
 	env := flag.String("env-file", "", "dotenv loaded only by Go process in live mode")
@@ -102,6 +103,11 @@ func main() {
 	limits.OutputTokens = 2048
 	runner, err := agent.New(db, runs, client, registry, limits)
 	must(err)
+	if *api {
+		check(!*allowPartial, "API verification does not accept allow-partial")
+		verifyAPI(*runtime, db, runs, runner, search, *live, *artifact, embed.Identity())
+		return
+	}
 	conversation, err := db.CreateConversation(ctx, "alice", "Tools integration")
 	must(err)
 	prompt := "T11_PRIMARY: Call search_papers first with query ti:memory, limit 1. Import its first candidate using import_paper with its exact arxiv_id and version; then call analyze_paper using the returned paper_version_id and question 'What memory mechanism, evaluation and limitations do the authors describe?'. Finish with a short Russian answer containing at least one evidence ID from the analysis and the actual coverage status. Do not repeat tools."
