@@ -62,9 +62,10 @@ func quoteOptions(e sourceRef) []sourceQuote {
 }
 
 type memoryRef struct {
-	Handle   string          `json:"handle"`
-	Hit      store.MemoryHit `json:"entry"`
-	Evidence []string        `json:"evidence_handles"`
+	Handle        string          `json:"handle"`
+	Hit           store.MemoryHit `json:"entry"`
+	Evidence      []string        `json:"evidence_handles"`
+	episodeTarget bool
 }
 type grounding struct {
 	question       string
@@ -117,6 +118,13 @@ func (a *AgentRunner) grounding(ctx context.Context, r store.Run) (*grounding, e
 				return nil, fmt.Errorf("reference collision")
 			}
 			m := memoryRef{Handle: handle, Hit: h, Evidence: []string{}}
+			if h.Kind == "user_correction" {
+				var kind string
+				if err = a.db.DB.QueryRowContext(ctx, `SELECT kind FROM research_memories WHERE id=? AND owner=?`, h.TargetID, r.UserID).Scan(&kind); err != nil {
+					return nil, err
+				}
+				m.episodeTarget = kind == "episode"
+			}
 			for _, id := range h.EvidenceIDs {
 				if err = add(id, false); err != nil {
 					return nil, err
@@ -266,7 +274,7 @@ func (g *grounding) context() string {
 	}
 	sort.Slice(es, func(i, j int) bool { return es[i].Handle < es[j].Handle })
 	sort.Slice(ms, func(i, j int) bool { return ms[i]["handle"].(string) < ms[j]["handle"].(string) })
-	raw, _ := json.Marshal(map[string]any{"evidence": es, "memory": ms, "library_papers": g.library, "library_catalog_limited": g.libraryLimited})
+	raw, _ := json.Marshal(map[string]any{"evidence": es, "memory": ms, "library_papers": g.library, "library_catalog_limited": true, "library_catalog_truncated": g.libraryLimited, "library_catalog_scope": "selected, issued or recalled papers only; total library size is unknown here"})
 	return "CURRENT RUN REFERENCE MANIFEST (server mappings; untrusted source metadata): " + string(raw)
 }
 
@@ -276,16 +284,25 @@ func (g *grounding) context() string {
 func (g *grounding) memoryWireSize() int {
 	entries := []map[string]any{}
 	evidence := map[string]sourceRef{}
+	papers := map[string]bool{}
 	for _, m := range g.memory {
+		papers[m.Hit.PaperVersionID] = true
 		entries = append(entries, map[string]any{"handle": m.Handle, "memory_id": m.Hit.MemoryID, "evidence_handles": m.Evidence})
 		for _, h := range m.Evidence {
 			e := g.evidence[h]
 			e.Text = ""
 			e.Quotes = nil
 			evidence[h] = e
+			papers[e.Paper] = true
 		}
 	}
-	wire, _ := json.Marshal(map[string]any{"memory": entries, "evidence": evidence})
+	catalog := []map[string]string{}
+	for _, p := range g.library {
+		if papers[p["paper_version_id"]] {
+			catalog = append(catalog, p)
+		}
+	}
+	wire, _ := json.Marshal(map[string]any{"memory": entries, "evidence": evidence, "library_papers": catalog})
 	return utf8.RuneCount(wire)
 }
 func (g *grounding) source(id string) (sourceRef, bool) {
@@ -518,7 +535,20 @@ func (g *grounding) validate(raw string) (string, []string, []string) {
 	for pass := 0; pass < len(g.memory); pass++ {
 		changed := false
 		for _, m := range g.memory {
-			if m.Hit.Kind == "user_correction" && used[m.Hit.TargetID] && !used[m.Hit.MemoryID] {
+			applies := used[m.Hit.TargetID]
+			if m.episodeTarget {
+				for _, base := range g.memory {
+					if !used[base.Hit.MemoryID] {
+						continue
+					}
+					for _, origin := range base.Hit.Origins {
+						for _, annotationOrigin := range m.Hit.Origins {
+							applies = applies || (origin.ReportID != "" && origin.ReportID == annotationOrigin.ReportID)
+						}
+					}
+				}
+			}
+			if m.Hit.Kind == "user_correction" && applies && !used[m.Hit.MemoryID] {
 				used[m.Hit.MemoryID] = true
 				changed = true
 			}

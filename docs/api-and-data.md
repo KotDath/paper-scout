@@ -118,3 +118,9 @@ HTTP admission запускает AgentRunner в фоне; polling, атомар
 ## Память исследований — контракт продолжения
 
 В T19 добавляются authenticated POST /api/v1/research-memory/search и GET/PATCH /api/v1/research-memory/{memory_id}; PATCH выполняет explicit correction или exclusion с expected_revision, owner берётся только из auth. T20 добавляет memory_recalled и optional research_memory в existing Report: retrieval_mode, reasons, recalled, referenced. Точные JSON и происхождение источников — [research-memory.md](research-memory.md). Memory содержит atomic claim cards с facet/evidence/analysis и версионированные user corrections/exclusions. Из reports/analyses восстанавливается базовая память; rebuild сохраняет пользовательские поправки. Отдельная исходная сущность отчёта не создаётся.
+
+### T22 scoped catalog and report correction closure
+
+The private final-reference manifest has `library_catalog_limited: true`: it lists only selected, issued or recalled papers, never a complete library inventory. `library_catalog_truncated` separately records the 20-paper cap; `library_catalog_scope` states that the total size is unknown. Memory-derived catalog metadata counts toward the automatic memory budget. No public canonical identifiers change.
+
+When an accepted comparison uses a delivered claim, delivered corrections targeting its origin report episode are included verbatim as user annotations, alongside direct and transitive corrections. This preserves the T19 report-wide correction contract without treating feedback as scientific evidence or marking unrelated recalled claims as used.

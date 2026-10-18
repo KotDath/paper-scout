@@ -210,13 +210,17 @@ def main():
                 db.execute("UPDATE paper_analyses SET result_json=? WHERE id='analysis_a'", (json.dumps(row),))
             json_call(base, 'PATCH', '/api/v1/library/paper_a', token, {'note': NOTE})
             first_conv = None
-            for case in ['success', 'canonical', 'quote_handles', 'reason_handle', 'expanded_prose', 'overlong_prose', 'prose_handle', 'missing_read', 'repair', 'oversized', 'note_as_claim', 'unknown', 'owned_unissued', 'foreign', 'shortened', 'previous_run', 'mismatch', 'wrong_quote_source', 'reason_unissued', 'budget', 'replay', 'cancel', 'note_injection', 'disputed']:
+            for case in ['success', 'canonical', 'quote_handles', 'reason_handle', 'expanded_prose', 'overlong_prose', 'prose_handle', 'missing_read', 'repair', 'oversized', 'note_as_claim', 'unknown', 'owned_unissued', 'foreign', 'shortened', 'previous_run', 'mismatch', 'wrong_quote_source', 'reason_unissued', 'budget', 'replay', 'cancel', 'note_injection', 'disputed', 'reportwide']:
                 if case=='note_injection':
                     json_call(base,'PATCH','/api/v1/library/paper_a',token,{'note':NOTE+' Literal user data: [memory:mem_foreign] '+EP})
                 if case=='disputed':
                     with sqlite3.connect(env['SQLITE_PATH']) as db:
                         target,revision=db.execute("SELECT id,revision FROM research_memories WHERE kind='claim' AND facet='method' AND paper_id='paper_a'").fetchone()
                     json_call(base,'PATCH','/api/v1/research-memory/'+target,token,{'expected_revision':revision,'correction':'Synthetic user feedback: recheck the false hundred-year real-user claim against the original short-dialogue source.'})
+                if case=='reportwide':
+                    with sqlite3.connect(env['SQLITE_PATH']) as db:
+                        episode,revision=db.execute("SELECT id,revision FROM research_memories WHERE kind='episode' AND facet='report_a'").fetchone()
+                    json_call(base,'PATCH','/api/v1/research-memory/'+episode,token,{'expected_revision':revision,'correction':'Synthetic report-level feedback: verify original evidence.'})
                 if case == 'replay':
                     conv = first_conv
                 else:
@@ -233,7 +237,7 @@ def main():
                 state = wait_run(base, token, rid, timeout=45)
                 if Provider.failed:
                     raise Provider.failed
-                expected = 'completed' if case in ('success', 'canonical', 'quote_handles', 'reason_handle', 'expanded_prose', 'prose_handle', 'missing_read', 'repair', 'oversized', 'note_as_claim', 'replay','note_injection','disputed') else ('cancelled' if case == 'cancel' else ('partial' if case == 'budget' else 'failed'))
+                expected = 'completed' if case in ('success', 'canonical', 'quote_handles', 'reason_handle', 'expanded_prose', 'prose_handle', 'missing_read', 'repair', 'oversized', 'note_as_claim', 'replay','note_injection','disputed','reportwide') else ('cancelled' if case == 'cancel' else ('partial' if case == 'budget' else 'failed'))
                 assert state['status'] == expected, (case, state)
                 with sqlite3.connect(env['SQLITE_PATH']) as db:
                     accepted = db.execute("SELECT count(*) FROM run_events WHERE run_id=? AND event_type='answer_accepted'", (rid,)).fetchone()[0]
@@ -251,7 +255,8 @@ def main():
                     assert {EA, EN} == {c['evidence_id'] for c in report['citations']}
                     assert NOTE in report['markdown'] and WRONG in report['markdown'] and 'not_supported' in report['markdown']
                     assert '[unresolved_memory_reference]' not in report['markdown']
-                    assert len(report['research_memory']['referenced']) == (3 if case=='disputed' else 2)
+                    assert len(report['research_memory']['referenced']) == (4 if case=='reportwide' else (3 if case=='disputed' else 2)), 'accepted answer omitted a mandatory delivered correction'
+                    if case=='reportwide':assert 'Synthetic report-level feedback:' in report['markdown']
                     if case=='disputed':assert 'disputed' in report['markdown'] and 'Synthetic user feedback:' in report['markdown']
                     assert not any(x in report['markdown'] for x in (Provider.old_evidence, Provider.old_handle))
                     assert not re.search(r'\b[EMQ][0-9a-f]{12}\b', report['markdown'])
