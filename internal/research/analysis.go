@@ -110,7 +110,19 @@ func (a *Analyzer) step(ctx context.Context, owner, runID, id string, ordinal in
 	if err := a.running(ctx, owner, runID); err != nil {
 		return nil, err
 	}
-	request := deepseek.Request{Messages: []deepseek.Message{deepseek.Text("system", analysisInstructions), deepseek.Text("user", body)}, MaxTokens: a.cfg.OutputTokens}
+	// Keep the output shape next to the end of potentially long article data.
+	// A live response returned arrays of prose strings despite the system
+	// contract. Do not coerce those strings into claims or award coverage.
+	example, _ := json.Marshal(Observations{Methods: []Claim{{Text: "concise supported observation", EvidenceIDs: ids[:min(1, len(ids))]}}, Results: []Claim{}, Limitations: []Claim{}})
+	contract := "Return only the required JSON object. Arrays contain objects, never strings. Exact shape example (replace observation and use only supplied evidence IDs): " + string(example)
+	// Preserve the JSON input contract used by sequential reading and synthesis.
+	var payload map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(body), &payload); err != nil {
+		return nil, err
+	}
+	payload["response_contract"], _ = json.Marshal(contract)
+	input, _ := json.Marshal(payload)
+	request := deepseek.Request{Messages: []deepseek.Message{deepseek.Text("system", analysisInstructions), deepseek.Text("user", string(input))}, MaxTokens: a.cfg.OutputTokens}
 	segmentID, err := a.prepare(ctx, id, ordinal, kind, p, request, ids)
 	if err != nil {
 		return nil, err
