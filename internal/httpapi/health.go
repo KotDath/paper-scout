@@ -10,7 +10,7 @@ import (
 	"paper-scout/internal/store"
 )
 
-// New returns the foundation routes. Later nodes add authenticated API routes.
+// New returns health and authenticated API routes.
 func New(db *store.Store) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -32,6 +32,7 @@ func New(db *store.Store) *http.ServeMux {
 		}
 		writeJSON(w, code, map[string]any{"status": status, "checks": checks})
 	})
+	registerAuth(mux, db)
 	return mux
 }
 

@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"paper-scout/internal/auth"
 	"paper-scout/internal/config"
 	"paper-scout/internal/httpapi"
 	"paper-scout/internal/store"
@@ -27,6 +28,7 @@ func main() {
 
 func run() error {
 	envFile := flag.String("env-file", "", "optional dotenv path; environment takes precedence")
+	seed := flag.Bool("seed", false, "create missing configured accounts, then exit")
 	flag.Parse()
 	cfg, err := config.Load(*envFile)
 	if err != nil {
@@ -41,6 +43,15 @@ func run() error {
 		return err
 	}
 	defer db.Close()
+	if *seed {
+		seedCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+		defer cancel()
+		if err := auth.New(db).SeedFromEnvironment(seedCtx); err != nil {
+			return err
+		}
+		slog.Info("account seed succeeded")
+		return nil
+	}
 	if err := os.MkdirAll(cfg.CacheDir, 0700); err != nil {
 		return err
 	}
