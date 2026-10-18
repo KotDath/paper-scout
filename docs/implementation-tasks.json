@@ -17,7 +17,7 @@
     {"id":"T13","title":"Flutter каркас и вход","depends_on":["T02"],"status":"done"},
     {"id":"T14","title":"Исследование во Flutter","depends_on":["T12","T13"],"status":"done"},
     {"id":"T15","title":"Интеграционные проверки","depends_on":["T12"],"status":"done"},
-    {"id":"T16","title":"Реальный сквозной проход","depends_on":["T14","T15"],"status":"todo"},
+    {"id":"T16","title":"Реальный сквозной проход","depends_on":["T14","T15"],"status":"done"},
     {"id":"T17","title":"Видео с эмулятора","depends_on":["T16"],"status":"todo"},
     {"id":"T18","title":"Итоговая сдача и runbook","depends_on":["T17"],"status":"todo"}
   ]

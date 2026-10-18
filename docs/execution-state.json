@@ -365,6 +365,29 @@
         "Changed Go formatting, whole-merge git diff --check, absence of tracked unit/widget tests/PDF/video artifacts and cleanup of temporary integration runtimes: passed. Unit/widget tests not created or run; ephemeral ports and temporary databases used; caches/logs remain ignored.",
         "Approved APK/claude-in-mobile live evidence and historical output_limit/cache caveats retained in docs/verification/T14.md. APK build and device UI not repeated during integration; full day-35 acceptance/video remain T16/T17. Shared dotenv not read; no push or deployment."
       ]
+    },
+    "T16": {
+      "status": "done",
+      "worktree": "/home/kotdath/omp/personal/ai/paper-scout-worktrees/T16",
+      "branch": "dag/t16",
+      "threads": {
+        "executor": "thr_8xu5v5ag5s",
+        "reviewer": "thr_7a3hj8gb7j",
+        "simplifier": "thr_5xqpvwd535"
+      },
+      "base_sha": "cef221924a17fbeb1018b18c056c2867f8ef54a5",
+      "approved_head_sha": "895285cd69a51479e11c41390d9dedbf8af48eee",
+      "merge_sha": "a438556cbbf1fc7504ba1559ef109e976df70902",
+      "checks": [
+        "Pre-merge: main clean at expected cef221924a17fbeb1018b18c056c2867f8ef54a5; base ancestor; dag/t16 and clean task worktree at approved 895285cd69a51479e11c41390d9dedbf8af48eee. Both review/fix cycles, simplification and final reviewer approval confirmed; verify.patch matches approved diff.",
+        "git merge --no-ff dag/t16 passed without conflicts; merge a438556cbbf1fc7504ba1559ef109e976df70902. Integrated tree matches approved node head; change adds only docs/verification/T16.md. Independent worktrees preserved.",
+        "go build -mod=readonly -o .bb/runtime/t15/build/ ./..., go vet -mod=readonly ./... and go mod verify passed with GOPROXY=off and root-local caches; dependencies unchanged.",
+        "GOPROXY=off python3 -B integration/check.py --only researchapi --only process: 2/2 PASS on the merge commit; production server and integration executables built with -race -mod=readonly. HTTP/SQLite research admission, full analysis, hybrid retrieval with real installed Qwen3, ownership, cancellation, persistence and production OS-process restart/recovery checked. arXiv/DeepSeek boundaries use labeled HTTP fixtures; no paid calls.",
+        "Approved T16 evidence rechecked: nine manifest artifact hashes and JSON syntax plus APK SHA-256 match; complete coverage has four continuous ranges covering 39757/39757 characters. Hybrid follow-up records BM25 9 candidates, dense 20 and RRF top-8; usage totals 20 DeepSeek requests and 122834 tokens.",
+        "Before/after restart fields match for reports, runs, coverage, segments, retrieval, tool results, profile, library and history; seven foreign-resource HTTP results are 404. Task-local SQLite opened read-only: integrity_check=ok and foreign_key_check empty.",
+        "Whole-merge git diff --check and progress JSON validation passed; no tracked unit/widget tests or runtime/PDF/video artifacts added. Unit/widget tests not created or run; ephemeral ports and disposable integration databases used; logs remain ignored in .bb/runtime/t15.",
+        "Product and Flutter sources unchanged; Flutter analyze, APK build and device UI not repeated during integration. Historical live Flutter/claude-in-mobile evidence and failed-attempt limitations retained in docs/verification/T16.md. T17 video and T18 final acceptance remain pending. Shared dotenv not read; no new paid calls, push or deployment."
+      ]
     }
   }
 }
