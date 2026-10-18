@@ -46,14 +46,15 @@ type Usage struct {
 }
 
 type runBudget struct {
-	mu            sync.Mutex
-	db            *store.Store
-	client        *deepseek.DeepSeekClient
-	owner, run    string
-	ctx           context.Context
-	limits        Limits
-	usage         Usage
-	limitExceeded bool
+	mu             sync.Mutex
+	db             *store.Store
+	client         *deepseek.DeepSeekClient
+	owner, run     string
+	ctx            context.Context
+	limits         Limits
+	usage          Usage
+	limitExceeded  bool
+	deferAssistant bool // production gate admits canonical messages after validation
 }
 
 // Once admission or actual usage reaches a global limit, a tool cannot clear
@@ -129,7 +130,7 @@ func (b *runBudget) complete(ctx context.Context, req deepseek.Request, assistan
 		b.usage.TotalTokens += response.Usage.TotalTokens
 	}
 	var message *store.Message
-	if assistant && response.Message.Role == "assistant" {
+	if assistant && !b.deferAssistant && response.Message.Role == "assistant" {
 		calls, _ := json.Marshal(response.Message.ToolCalls)
 		provider, _ := json.Marshal(map[string]any{"id": response.ID, "model": response.Model, "finish_reason": response.FinishReason, "usage": response.Usage, "accepted": err == nil})
 		message = &store.Message{Role: "assistant", Content: response.Message.Content, ReasoningContent: response.Message.ReasoningContent, ToolCalls: calls, ProviderJSON: provider}

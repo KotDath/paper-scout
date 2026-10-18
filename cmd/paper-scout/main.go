@@ -116,6 +116,7 @@ func run() error {
 		if err != nil {
 			return err
 		}
+		runner.WithGrounding()
 		if cfg.ResearchMemoryEnabled {
 			researchapp.Attach(db, runs, runner, retrievalService, researchmemory.New(db.DB, embeddingClient))
 		} else {

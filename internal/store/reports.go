@@ -129,15 +129,17 @@ func (s *Store) RunSources(ctx context.Context, owner, run string) ([]ReportSour
 }
 
 type Report struct {
-	ResearchMemory *ResearchMemory `json:"research_memory"`
-	ID             string          `json:"id"`
-	RunID          string          `json:"run_id"`
-	Markdown       string          `json:"markdown"`
-	Citations      json.RawMessage `json:"citations"`
-	Sources        []ReportSource  `json:"sources"`
-	Coverage       json.RawMessage `json:"coverage"`
-	Limitations    []string        `json:"limitations"`
-	CreatedAt      string          `json:"created_at"`
+	Grounded         bool            `json:"-"`
+	GroundingRepairs int             `json:"-"`
+	ResearchMemory   *ResearchMemory `json:"research_memory"`
+	ID               string          `json:"id"`
+	RunID            string          `json:"run_id"`
+	Markdown         string          `json:"markdown"`
+	Citations        json.RawMessage `json:"citations"`
+	Sources          []ReportSource  `json:"sources"`
+	Coverage         json.RawMessage `json:"coverage"`
+	Limitations      []string        `json:"limitations"`
+	CreatedAt        string          `json:"created_at"`
 }
 
 func (s *Store) Report(ctx context.Context, owner, id string) (Report, error) {
@@ -202,6 +204,15 @@ func (s *Store) CompleteReport(ctx context.Context, owner, run string, report Re
 		_, err = tx.ExecContext(ctx, `INSERT INTO reports(id,user_id,run_id,markdown,citations_json,sources_json,coverage_json,limitations_json,created_at,research_memory_json) VALUES(?,?,?,?,?,?,?,?,?,?)`, report.ID, owner, run, report.Markdown, string(report.Citations), string(sources), string(report.Coverage), string(limits), report.CreatedAt, string(memory))
 		if err != nil {
 			return err
+		}
+		if report.Grounded {
+			if _, err = appendMessage(ctx, tx, r, Message{Role: "assistant", Content: &report.Markdown}); err != nil {
+				return err
+			}
+			payload, _ := json.Marshal(map[string]any{"contract": "grounded_v1", "repairs": report.GroundingRepairs})
+			if err = appendEvent(ctx, tx, run, "answer_accepted", payload, nil); err != nil {
+				return err
+			}
 		}
 		payload, _ := json.Marshal(map[string]string{"report_id": report.ID})
 		if err = appendEvent(ctx, tx, run, "report_saved", payload, nil); err != nil {

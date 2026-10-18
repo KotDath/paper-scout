@@ -619,3 +619,72 @@ claims, включая исключённые записи. Выполняетс
 При ошибке Flutter показывает недоступность аннотаций рядом с исходным отчётом,
 не «поправок нет». Markdown и nullable historical research_memory не меняются.
 Это дополнительный read adapter T21, не изменение Go-agent или T20 recall.
+
+## T22: исполняемый контракт принятия ответа
+
+Production `cmd/paper-scout` включает `AgentRunner.WithGrounding()` также при
+memory-off. Legacy composed callers без этой опции сохраняют прежний контракт.
+Это один существующий tool loop и DeepSeek gateway, без второго клиента/отчёта.
+
+Модель получает отдельный bounded reference manifest текущего run. `E`/`M` +
+12 hex — scoped handles evidence/memory; отображение детерминировано SHA-256
+от run/kind/canonical ID, не зависит от порядка выдачи. Коллизия закрывает run.
+Идентификаторы выдаются только из текущих snapshots и успешных typed results
+`analyze_paper`, `search_library`, `read_passages`, с повторной owner/DB проверкой.
+Произвольный prose не выдаёт handle. Точные длинные canonical IDs поддерживаются;
+сокращения/prefix/fuzzy expansion, чужие и старые handles не поддерживаются.
+Manifest не равен всей библиотеке: новые источники можно найти обычными tools.
+Он также содержит каталог до 20 owner-scoped названий/paper IDs с явным
+`library_catalog_limited`; это навигационные metadata, не новые evidence.
+
+У успешно прочитанного passage есть до шести `quote_options`: `Q` scoped handle,
+Unicode полуинтервал относительно passage и **неизменённый** slice текста до
+350 символов. Final quote принимает exact Q только своего E либо literal excerpt
+20..800 символов с точным substring совпадением. Нет исправления приблизительных
+цитат. Оригинальный текст из read_passages и options остаётся данными.
+Quote options — primary-read tool context, не automatic memory; полный запрос
+подчиняется прежнему byte/token/request budget. Snapshot JSON + memory alias
+metadata повторно проверяются на общий предел 12000; overflow явный.
+
+No-tool final answer — JSON: scope, findings[{source,quote,conclusion}],
+comparisons[{memory,previous,previous_quote,current,current_quote,assessment,
+conclusion}], notes[], memory_reason, limitations[]. Максимум 6 findings,
+3 comparisons, 8 notes/limitations. Assessment supported/not_supported/uncertain.
+Comparisons требуют original read A и B из разных papers и evidence origin
+именно выбранного claim. Для review без межстатейного сравнения current и
+current_quote пусты; UI/Markdown явно называет это только проверкой старого claim.
+Нерелевантный recall допускает пустые findings/comparisons и явный abstention.
+Scope модели не публикуется: сервер показывает исходный вопрос пользователя.
+
+Notes выбираются по выданным M-handles и выводятся сервером **дословно**,
+отдельно от научных выводов. Correction closure materially used claim/note
+обязательна; это feedback, а не доказанная истина. Typed selections определяют
+canonical report citations/referenced; текст пользовательской note не может
+создать научную ссылку. Известные issued identifiers в текстовых полях
+нормализуются точно как plain canonical IDs и сами по себе не считаются
+used/referenced. Чужой, невыданный или старый handle в prose тоже отклоняется.
+
+Gate работает **до** completed/report finalizer. При первом invalid draft —
+точная диагностика и одна repair-фаза. Недостающие выбранные original passages
+сервер читает зарегистрированным read_passages (<=8/16000), с обычными call IDs,
+tool accounting, deadline/cancel и journal. Repair использует тот же budget.complete
+и run limits; последующий invalid final draft = failed answer_validation_failed,
+без report. Бюджет/отмена сохраняют прежнюю семантику. В 5-секундном finalizer
+provider I/O отсутствует. Совпадение quote и валидная ссылка **не доказывают**
+полную семантическую корректность conclusion — ручная live сверка обязательна.
+
+Raw drafts и provider reasoning остаются только private model_request_finished
+audit. В messages публикуются canonical tool calls с согласованными tool_call IDs
+и принятый canonical final, без rejected drafts/aliases. Final message,
+answer_accepted и report/terminal status фиксируются одной транзакцией
+CompleteReport; concurrent cancellation не публикует final message/report.
+Следующий grounded run
+в том же диалоге получает старый user question и immutable report, а не старые
+tool chains/отклонённые ответы. Это применимо и к legacy completed reports;
+исторический ответ остаётся помеченными недоверенными данными.
+
+Адресная проверка: `python3 -B integration/grounding.py` — production executable,
+real HTTP/SQLite/Qwen3, явно synthetic science/provider fixtures. Она заменяет
+старые production ожидания T20 fixture, допускавшие completed с invalid refs;
+сам composed legacy agent API не меняется. Live/видео статус определяется
+только фактическими результатами [T22](verification/T22.md).

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"paper-scout/internal/deepseek"
 	"paper-scout/internal/research"
@@ -15,6 +16,7 @@ import (
 )
 
 type AgentRunner struct {
+	grounded bool
 	memory   *researchmemory.Service
 	db       *store.Store
 	runs     *research.Service
@@ -24,9 +26,13 @@ type AgentRunner struct {
 }
 
 type Result struct {
-	Run    store.Run
-	Answer string
-	Usage  Usage
+	Run              store.Run
+	Answer           string
+	Usage            Usage
+	Grounded         bool
+	EvidenceIDs      []string
+	MemoryIDs        []string
+	GroundingRepairs int
 }
 
 func New(db *store.Store, runs *research.Service, client *deepseek.DeepSeekClient, registry *Registry, limits Limits) (*AgentRunner, error) {
@@ -85,7 +91,9 @@ func (a *AgentRunner) RunWithFinalizer(ctx context.Context, owner, conversation,
 	if err := a.db.SaveAgentLimits(runCtx, owner, id, effective); err != nil {
 		return a.finish(result, "failed", "persistence_error")
 	}
-	budget := &runBudget{db: a.db, client: a.client, owner: owner, run: id, ctx: runCtx, limits: limits}
+	budget := &runBudget{db: a.db, client: a.client, owner: owner, run: id, ctx: runCtx, limits: limits, deferAssistant: a.grounded}
+	repairs := 0
+	repairHint := ""
 	status, code := "failed", ""
 	hasUsefulResult := false
 	scope := Scope{Owner: owner, ConversationID: conversation, RunID: id}
@@ -109,10 +117,29 @@ func (a *AgentRunner) RunWithFinalizer(ctx context.Context, owner, conversation,
 			}
 			contentRecalled = true
 		}
-		messages, buildErr := (AgentSession{Store: a.db}).Context(runCtx, owner, conversation, id)
+		messages, buildErr := (AgentSession{Store: a.db, CanonicalHistory: a.grounded}).Context(runCtx, owner, conversation, id)
 		if buildErr != nil {
 			code = "incoherent_history"
 			break
+		}
+		var ground *grounding
+		if a.grounded {
+			ground, buildErr = a.grounding(runCtx, started)
+			if buildErr != nil {
+				code = "grounding_unavailable"
+				break
+			}
+			manifest := ground.context()
+			snaps, e := a.db.MemorySnapshots(runCtx, owner, id)
+			wire, _ := json.Marshal(snaps)
+			if e != nil || (len(snaps) > 0 && utf8.RuneCount(wire)+ground.memoryWireSize() > memoryContextRunes) {
+				code = "memory_context_limit"
+				break
+			}
+			messages = append(messages, deepseek.Text("system", finalContract), deepseek.Text("user", manifest))
+			if repairHint != "" {
+				messages = append(messages, deepseek.Text("user", repairHint))
+			}
 		}
 		request := deepseek.Request{Messages: messages, Tools: a.registry.Definitions(), MaxTokens: limits.OutputTokens}
 		var response deepseek.Response
@@ -150,8 +177,61 @@ func (a *AgentRunner) RunWithFinalizer(ctx context.Context, owner, conversation,
 				break
 			}
 			result.Answer = *response.Message.Content
+			if a.grounded {
+				answer, issues, missing := ground.validate(result.Answer)
+				if len(issues) > 0 {
+					if err := budget.save("answer_rejected", map[string]any{"code": "answer_validation_failed", "repair": repairs}, map[string]any{"issues": issues}, nil); err != nil {
+						code = "persistence_error"
+						break
+					}
+					if repairs >= 1 {
+						code = "answer_validation_failed"
+						result.Answer = ""
+						break
+					}
+					repairs++
+					if len(missing) > 0 {
+						if err := a.readForRepair(budget, scope, missing); err != nil {
+							code = failureCode(err)
+							break
+						}
+					}
+					diagnostic, _ := json.Marshal(issues)
+					repairHint = "ONE FINAL REPAIR (previous draft rejected, not accepted history). Fix these server diagnostics: " + string(diagnostic) + ". Original passages just read by the server are in the tool history. Use current manifest only; you may use normal tools within the same budget. Return the required final JSON. If not supported, abstain explicitly with empty findings/comparisons and a narrow reason. No second invalid draft will be accepted."
+					continue
+				}
+				result.Answer = answer
+				result.Grounded = true
+				result.EvidenceIDs = ground.usedEvidence
+				result.MemoryIDs = ground.usedMemory
+				result.GroundingRepairs = repairs
+				if finalize == nil {
+					if err := budget.save("answer_accepted", map[string]any{"contract": "grounded_v1", "repairs": repairs}, nil, &store.Message{Role: "assistant", Content: &result.Answer}); err != nil {
+						code = "persistence_error"
+						break
+					}
+				}
+			}
 			status = "completed"
 			break
+		}
+		if a.grounded {
+			// Raw provider messages are private model_request_finished payloads.
+			// Admit canonical tool arguments only; final drafts never enter messages.
+			for i, c := range response.Message.ToolCalls {
+				if canonical, e := ground.canonicalCall(c); e == nil {
+					response.Message.ToolCalls[i] = canonical
+				} else {
+					// Keep the exact invalid provider args only in private audit.
+					// A canonical invalid-arguments call still gets its paired error.
+					response.Message.ToolCalls[i].Function.Arguments = "{}"
+				}
+			}
+			calls, _ := json.Marshal(response.Message.ToolCalls)
+			if err := budget.save("tool_calls_accepted", map[string]any{"calls": len(response.Message.ToolCalls)}, nil, &store.Message{Role: "assistant", ToolCalls: calls, ReasoningContent: response.Message.ReasoningContent}); err != nil {
+				code = "persistence_error"
+				break
+			}
 		}
 		for i, call := range response.Message.ToolCalls {
 			if runCtx.Err() != nil {
