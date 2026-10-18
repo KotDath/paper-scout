@@ -481,6 +481,31 @@
         "Changed Go formatting, Python AST parsing, whole-integration git diff --check, absence of tracked unit/widget tests/credentials/runtime/PDF/video artifacts and progress JSON preservation: PASS. T20 status/execution state committed separately from merge and process-check fix. Unit/widget tests not created or run.",
         "Flutter sources unchanged; analyze/device UI, real-article scientific acceptance and new video remain T21/T22 scope. Historical bounded live smoke and limitations retained in docs/verification/T20.md. Shared secret-bearing dotenv not read; no new paid live calls, push or deployment."
       ]
+    },
+    "T21": {
+      "status": "done",
+      "worktree": "/home/kotdath/omp/personal/ai/paper-scout-worktrees/T21",
+      "branch": "dag/t21",
+      "threads": {
+        "executor": "thr_ttam967y48",
+        "reviewer": "thr_47yw8m9pfu",
+        "simplifier": "thr_z78rqujiyk"
+      },
+      "base_sha": "67c5f5c788840b048c4c044eee254f7216f1ca0f",
+      "approved_head_sha": "d2724d611d885f44157300a62a15f37715657bd6",
+      "merge_sha": "87a67045261a245b6fcb3ca84ab8d6c278c641b6",
+      "checks": [
+        "Pre-merge: main clean at expected cabf5d3c0e3f755ec5c9c911021a6749bef01569; base 67c5f5c788840b048c4c044eee254f7216f1ca0f is an ancestor; clean dag/t21 worktree matches approved d2724d611d885f44157300a62a15f37715657bd6. Two review/fix cycles, simplification and final reviewer approval confirmed; verify.patch matches approved diff except terminal newline.",
+        "git merge --no-ff dag/t21: merge 87a67045261a245b6fcb3ca84ab8d6c278c641b6. Sole conflict was adjacent documentation additions in docs/research-memory.md; both T20 and T21 sections preserved. Product code merged without conflicts. All independent worktree registrations, branches and heads preserved; task T21 remains clean.",
+        "GOPROXY=off go build -mod=readonly -o .bb/runtime/t21-integration/bin/ ./..., go vet -mod=readonly ./... and go mod verify: PASS with existing root-local caches. Dependency files unchanged. Flutter analyze --no-pub client, Dart analyze integration/flutter_memory.dart, Dart format (9 files unchanged) and whole-integration git diff --check: PASS.",
+        "Initial integration/flutter_memory.py failed during fixture setup: T20 migration added a nullable report snapshot column, while T21 used positional INSERT with nine values. Integration-only fix 380f7ef changes INSERT to explicit existing columns and preserves NULL snapshot; production code unchanged. Targeted Go vet and rerun integration/flutter_memory.py: PASS.",
+        "python3 -B integration/flutter_memory.py: PASS with real Dart/Go/HTTP/auth/SQLite/Qwen3; report-wide current corrections through history/another card, stale revision 409, exclude/restore, immutable Markdown/snapshots, nullable snapshot, recalled/referenced, ownership 404 and logout 401. Persisted scientific data and T20 HTTP snapshots are explicitly labeled fixtures.",
+        "python3 -B integration/flutter_research.py: PASS with production Dart repository and real Go/HTTP/SQLite/Qwen3; report/evidence/full fixture coverage, hybrid follow-up, library/note/profile, admission/idempotency, cancellation, pagination, ownership/logout. arXiv/DeepSeek responses are labeled HTTP fixtures.",
+        "python3 -B integration/agentmemory.py: PASS on ordinary production cmd/paper-scout, real SQLite/auth/agent/tools/Qwen3. Automatic first-request recall after restart, content recall, capture recovery without replay, original passages, immutable snapshots, current note edit/clear/correction, validated recalled/referenced links, budgets/cancellation/failures, owner isolation and memory-off control passed. Scientific origins and DeepSeek HTTP boundary are synthetic fixtures; no paid calls.",
+        "python3 -B integration/check.py --only researchapi --only process: 2/2 PASS; production/integration executables built with -race -mod=readonly, no race diagnostics. Real HTTP/SQLite/Qwen3 research API and OS-process cancellation/crash/restart/recovery checked; external arXiv/DeepSeek use labeled HTTP fixtures. Ephemeral ports and disposable databases used.",
+        "Progress metadata preserves all other nodes; T21 task/status, worktree, branch, role IDs, approved node head and actual merge SHA recorded in separate progress commit. No tracked unit/widget tests, credentials, runtime, PDF or video artifacts added; unit/widget tests not created or run. Sanitized logs remain ignored under .bb/runtime/t21-integration.",
+        "UI/APK/video not repeated during serialized integration; approved claude-in-mobile evidence and fixture/live limitations remain in docs/verification/T21.md. Production live scientific acceptance A-to-B and new video remain T22. Shared secret dotenv not read; no paid live calls, push or deployment."
+      ]
     }
   }
 }
