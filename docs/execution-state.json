@@ -434,6 +434,29 @@
         "Whole-merge git diff --check and progress JSON validation PASS. Only four approved Markdown files plus two progress JSON files changed. No tracked unit/widget tests, runtime, credential, PDF or video artifacts added; unit/widget tests not created or run; local evidence and logs remain ignored.",
         "Product and Flutter sources unchanged; Flutter analyze/build, device UI and paid live calls not repeated. Historical live Flutter/claude-in-mobile evidence and limitations retained in T16/T17/T18: bounded live composition differs from production entrypoint, extraction excludes OCR/images, AI accuracy is limited to checked claims, and artifacts require local transfer. Secret dotenv not read; no push or deployment."
       ]
+    },
+    "T19": {
+      "status": "done",
+      "worktree": "/home/kotdath/omp/personal/ai/paper-scout-worktrees/T19",
+      "branch": "dag/t19",
+      "threads": {
+        "executor": "thr_pie7b36486",
+        "reviewer": "thr_z2jcra35h2",
+        "simplifier": "thr_z4gr996t4x"
+      },
+      "base_sha": "d647fcff21bfe1190676971382e1a7b33df33831",
+      "approved_head_sha": "3e7470c6857258bc17269d0df637e40682ee4b1c",
+      "merge_sha": "aec2bd94c6835774cb7444c5e44a1fffe4506053",
+      "checks": [
+        "Pre-merge: clean main at expected d647fcff21bfe1190676971382e1a7b33df33831; base ancestor; clean dag/t19 worktree at approved 3e7470c6857258bc17269d0df637e40682ee4b1c. Two review/fix cycles, simplification and final reviewer approval confirmed. Approved verify.patch matches the node diff except its final newline.",
+        "git merge --no-ff dag/t19: PASS without conflicts; merge aec2bd94c6835774cb7444c5e44a1fffe4506053. Integrated tree exactly matches approved node head. Independent worktrees were preserved.",
+        "GOPROXY=off go build -mod=readonly -o .bb/runtime/t19-integration/bin/ ./..., GOPROXY=off go vet -mod=readonly ./..., go mod verify and whole-merge git diff --check: PASS. Dependency files unchanged.",
+        "integration/researchmemory built with -race -mod=readonly and run against real installed Qwen3: PASS, 32 embedding requests, no race diagnostics. Real SQLite/auth/HTTP/BM25/dense/RRF with synthetic persisted research; ephemeral ports and disposable database removed after the run. ADD/NOOP, rebuild/restart, account isolation, revision/correction/exclusion/restore, note edit/clear, inference races, pending backlog, partial coverage, bounded indexing, outage and cutoff/current-run filters passed.",
+        "Both review regressions: PASS. Claim-attached disputed notes retain mandatory corrections within the whole-group text budget; backlog and query-inference edits return retryable memory_pending then current annotations. Correction provenance agrees with target/GET for report/run/conversation/evidence; seven durable origins produce at most five in published context, mandatory origins displace optional origins, and six mandatory origins omit the group with origin_budget.",
+        "GOPROXY=off python3 -B integration/check.py: 14/14 PASS on merge commit with -race -mod=readonly production/integration executables; no race diagnostics. Foundation/accounts, source ingestion/Poppler, agent/analysis, hybrid retrieval with real Qwen3, research API and production OS-process cancel/crash/restart recovery passed. arXiv/DeepSeek boundaries use explicitly labeled HTTP fixtures; no paid live calls.",
+        "Progress JSON preserves all other nodes; T19 task status and execution state updated in a separate metadata commit. No tracked unit/widget tests, credentials, runtime, PDF or video artifacts added. Unit/widget tests were not created or run; sanitized logs remain ignored under .bb/runtime.",
+        "Flutter and AgentRunner sources unchanged; Flutter analyze/device UI and automatic recall/live acceptance T20-T22 are outside this integration. Secret-bearing dotenv not read; no push or deployment."
+      ]
     }
   }
 }
