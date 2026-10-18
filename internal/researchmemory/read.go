@@ -109,6 +109,8 @@ func origins(ctx context.Context, q querier, owner, id string, req SearchRequest
 	return valid, nil
 }
 func decorate(h *Hit, oo []Origin) {
+	h.ReportID = ""
+	h.ConversationID = ""
 	h.Origins = oo
 	h.EvidenceIDs = []string{}
 	for _, o := range oo {
@@ -201,8 +203,8 @@ func (s *Service) get(ctx context.Context, tx *sql.Tx, owner, id string) (Entry,
 // base hit is admitted into the context. Corrections inherit target provenance.
 func annotations(ctx context.Context, q querier, owner string, h Hit, req SearchRequest, includeExcluded bool) ([]Hit, error) {
 	// Discover every related correction, including one scoped to an origin
-	// omitted by the context budget. Output still inherits only h's admitted
-	// origins; discovery must never enlarge the published provenance group.
+	// omitted by the context budget. Each annotation retains its own actual
+	// provenance; Search budgets the complete group after discovering corrections.
 	relationOrigins := h.Origins
 	if h.Kind == "claim" {
 		all, e := origins(ctx, q, owner, h.MemoryID, req)
@@ -351,7 +353,15 @@ func annotations(ctx context.Context, q querier, owner string, h Hit, req Search
 			}
 			ids = append(ids, corrections[id]...)
 		}
-		decorate(&entry.Hit, h.Origins)
+		originID := entry.MemoryID
+		if entry.Kind == "user_correction" {
+			originID = entry.TargetID
+		}
+		oo, e := origins(ctx, q, owner, originID, req, includeExcluded)
+		if e != nil {
+			return nil, e
+		}
+		decorate(&entry.Hit, oo)
 		out = append(out, entry.Hit)
 	}
 	return out, nil

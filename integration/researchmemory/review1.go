@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"sync/atomic"
 
@@ -273,6 +274,88 @@ func review1(ctx context.Context, db *store.Store, memory *researchmemory.Servic
 	if len(entry.Origins) != 7 {
 		return errors.New("context origin budget destroyed durable provenance")
 	}
+	// Search and authenticated GET must agree on each correction's actual
+	// target. A genuine subset of consolidated provenance can fit the budget;
+	// borrowing another target's metadata or evidence cannot.
+	for _, h := range result.Hits {
+		if h.Kind != "user_correction" {
+			continue
+		}
+		var direct researchmemory.Entry
+		status, e := request(base, "GET", "/api/v1/research-memory/"+h.MemoryID, token, nil, &direct)
+		if e != nil {
+			return e
+		}
+		if status != 200 {
+			return fmt.Errorf("correction GET HTTP %d", status)
+		}
+		if h.TargetID != direct.TargetID || h.ReportID != direct.ReportID || h.ConversationID != direct.ConversationID || h.PaperVersionID != direct.PaperVersionID {
+			return errors.New("Search correction attribution differs from its target/GET")
+		}
+		expectedEvidence := []string{}
+		for _, o := range h.Origins {
+			found := false
+			for _, actual := range direct.Origins {
+				if mustJSON(o) == mustJSON(actual) {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return errors.New("Search correction fabricated target report/run/conversation/evidence provenance")
+			}
+			for _, ev := range o.EvidenceIDs {
+				if !slices.Contains(expectedEvidence, ev) {
+					expectedEvidence = append(expectedEvidence, ev)
+				}
+			}
+		}
+		if !slices.Equal(h.EvidenceIDs, expectedEvidence) {
+			return errors.New("Search correction evidence does not match admitted actual target origins")
+		}
+		if h.TargetID == episodeID {
+			if h.ReportID != "report_review_4" || h.ConversationID != "conv_review_4" || len(h.EvidenceIDs) != 0 {
+				return errors.New("episode correction borrowed scientific claim provenance")
+			}
+			for _, o := range h.Origins {
+				if o.RunID != "run_review_4" {
+					return errors.New("episode correction borrowed another run")
+				}
+			}
+		}
+		if h.TargetID == noteID && (len(h.Origins) != 0 || len(h.EvidenceIDs) != 0 || h.ReportID != "") {
+			return errors.New("personal correction borrowed scientific evidence")
+		}
+	}
 	fmt.Println("PASS review P2: seven durable origins, five across all published hits/annotations; omitted-origin correction remains mandatory")
+	fmt.Println("PASS review2: correction report/run/conversation/evidence agree with actual target/GET; mandatory seventh origin displaces optional provenance")
+	// Six distinct episode corrections cannot fit in five origins. No scientific
+	// hit may escape with a subset of its mandatory corrections in this case.
+	for _, report := range []string{"report_a", "report_duplicate", "report_review_0", "report_review_1", "report_review_2"} {
+		var id string
+		var revision int
+		if err = db.DB.QueryRowContext(ctx, `SELECT id,revision FROM research_memories WHERE kind='episode' AND facet=?`, report).Scan(&id, &revision); err != nil {
+			return err
+		}
+		if _, err = patch(id, revision, "Mandatory correction for "+report); err != nil {
+			return err
+		}
+	}
+	code, result, _, err = search()
+	if err != nil {
+		return err
+	}
+	if code != 200 {
+		return fmt.Errorf("mandatory origin overflow HTTP %d", code)
+	}
+	if !slices.Contains(result.Reasons, "origin_budget") {
+		return errors.New("mandatory origin overflow not explicit")
+	}
+	for _, h := range result.Hits {
+		if h.Kind == "claim" && h.PaperVersionID == "paper_a" {
+			return errors.New("scientific group published without all mandatory origin corrections")
+		}
+	}
+	fmt.Println("PASS review2: six mandatory target origins omit entire scientific group with explicit origin_budget")
 	return nil
 }

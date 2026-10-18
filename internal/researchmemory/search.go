@@ -396,36 +396,26 @@ func (s *Service) Search(ctx context.Context, owner string, req SearchRequest) (
 		if err = decorateHit(&h); err != nil {
 			return out, err
 		}
-		eligible := []Origin{}
-		newOrigins := map[string]bool{}
-		for _, o := range h.Origins {
-			if usedOrigins[o.ReportID] || newOrigins[o.ReportID] || len(usedOrigins)+len(newOrigins) < 5 {
-				eligible = append(eligible, o)
-				if !usedOrigins[o.ReportID] {
-					newOrigins[o.ReportID] = true
-				}
-			}
+		ann, e := annotations(ctx, tx, owner, h, req, false)
+		if e != nil {
+			return out, e
 		}
-		if len(h.Origins) > len(eligible) {
+		// Reserve actual primary origins of mandatory annotations before filling
+		// remaining space with optional origins of the scientific hit. Never relabel
+		// a correction to fit the budget or silently drop the correction itself.
+		newOrigins, trimmed, fits := budgetOrigins(&h, ann, usedOrigins)
+		if trimmed || !fits {
 			out.Reasons = append(out.Reasons, "origin_budget")
 		}
-		if len(h.Origins) > 0 && len(eligible) == 0 {
+		if !fits {
 			continue
 		}
-		h.ReportID = ""
-		h.ConversationID = ""
-		decorate(&h, eligible)
-		// Episode and claim from the same report do not occupy multiple origins.
 		originGroup := ""
 		if len(h.Origins) > 0 {
 			originGroup = h.Origins[0].ReportID
 		}
 		if originGroup != "" && selected["report:"+originGroup] {
 			continue
-		}
-		ann, e := annotations(ctx, tx, owner, h, req, false)
-		if e != nil {
-			return out, e
 		}
 		cost := utf8.RuneCountInString(h.Text)
 		for _, a := range ann {
@@ -462,3 +452,53 @@ func (s *Service) Search(ctx context.Context, owner string, req SearchRequest) (
 	return out, tx.Commit()
 }
 func hitKey(h Hit) string { return h.MemoryID + ":" + strconv.Itoa(h.CharStart) }
+
+// budgetOrigins admits only genuine subsets of each entry's own provenance.
+// The canonical primary origin (also exposed by GET) is mandatory per entry;
+// additional origins are optional. Corrections can displace optional origins,
+// but a group with more than five mandatory origins must be omitted as a whole.
+func budgetOrigins(h *Hit, annotations []Hit, used map[string]bool) (map[string]bool, bool, bool) {
+	entries := []*Hit{h}
+	for i := range annotations {
+		entries = append(entries, &annotations[i])
+	}
+	allowed := map[string]bool{}
+	for id := range used {
+		allowed[id] = true
+	}
+	for _, entry := range entries {
+		if len(entry.Origins) > 0 {
+			allowed[entry.Origins[0].ReportID] = true
+		}
+	}
+	if len(allowed) > 5 {
+		return nil, false, false
+	}
+	for _, entry := range entries {
+		for _, o := range entry.Origins {
+			if len(allowed) < 5 {
+				allowed[o.ReportID] = true
+			}
+		}
+	}
+	trimmed := false
+	for _, entry := range entries {
+		selected := []Origin{}
+		for _, o := range entry.Origins {
+			if allowed[o.ReportID] {
+				selected = append(selected, o)
+			}
+		}
+		if len(selected) < len(entry.Origins) {
+			trimmed = true
+		}
+		decorate(entry, selected)
+	}
+	added := map[string]bool{}
+	for id := range allowed {
+		if !used[id] {
+			added[id] = true
+		}
+	}
+	return added, trimmed, true
+}
