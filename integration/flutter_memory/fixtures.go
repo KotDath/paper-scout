@@ -51,5 +51,5 @@ func seedResearch(ctx context.Context, db *store.Store, key string) error {
 	if err := exec(`UPDATE runs SET report_id=? WHERE id=?`, "report_"+key, run); err != nil {
 		return err
 	}
-	return exec(`INSERT INTO reports VALUES(?,'owner_a',?,?,'[]',?,'[]','[]',?)`, "report_"+key, run, "Synthetic report: "+source, mustJSON(sources), stamp)
+	return exec(`INSERT INTO reports(id,user_id,run_id,markdown,citations_json,sources_json,coverage_json,limitations_json,created_at) VALUES(?,'owner_a',?,?,'[]',?,'[]','[]',?)`, "report_"+key, run, "Synthetic report: "+source, mustJSON(sources), stamp)
 }
