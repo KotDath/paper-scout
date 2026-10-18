@@ -169,6 +169,31 @@
         "gofmt and whole-merge git diff --check: passed; no tracked unit/widget tests added or run. Flutter unchanged. No paid/provider calls, device interaction, push or deployment.",
         "T07 provides durable lifecycle/history only; new HTTP runs remain queued until T09/T12 execution is wired. DeepSeek, arXiv, Ollama, retrieval, reports and UI were not revalidated by this node."
       ]
+    },
+    "T09": {
+      "status": "done",
+      "worktree": "/home/kotdath/omp/personal/ai/paper-scout-worktrees/T09",
+      "branch": "dag/t09",
+      "threads": {
+        "executor": "thr_avhgg8qniu",
+        "reviewer": "thr_uvbu5pmhwt",
+        "simplifier": "thr_8eu5schycq"
+      },
+      "base_sha": "3cc924211792d67f37eaa1c93006b6c27d350036",
+      "approved_head_sha": "e03cbf1edeecffc6a96dc2ac87ba32580ad01217",
+      "merge_sha": "28541843aad1625380d3a8522f2e92f5739d5fb0",
+      "checks": [
+        "Pre-merge: main clean at expected 3cc924211792d67f37eaa1c93006b6c27d350036; base ancestor; dag/t09 and clean task worktree at approved e03cbf1edeecffc6a96dc2ac87ba32580ad01217; both review/fix cycles, simplification and final reviewer approval confirmed; verify.patch matches approved diff.",
+        "git merge --no-ff dag/t09: passed without conflicts; merge 28541843aad1625380d3a8522f2e92f5739d5fb0. Independent worktrees preserved.",
+        "go build -mod=readonly -o .bb/runtime/t09-integration/bin/ ./..., go vet -mod=readonly ./... and go mod verify: passed using existing root .bb/runtime/t01 caches and GOPROXY=off.",
+        "Rebuilt integration/agent with -race and ran without --live using a temporary root-worktree runtime: passed actual SQLite, lifecycle, registry and DeepSeek HTTP client integration; owner isolation, coherent follow-up history, original call IDs, private reasoning, strict tool validation, limits, retries, cancellation, finalization and persistence.",
+        "Agent review regressions: nested token exhaustion prevents pending tools and preserves their original skipped IDs and accounting; rejected charged calls yield failed without useful work, while useful successful results permit partial. No race reports.",
+        "integration/runs.py main() with RUNTIME redirected to root .bb/runtime/t01: all seven groups passed, production process and companion rebuilt with -race; HTTP/SQLite ownership, concurrent idempotency/event sequence, capacity, strict inputs/pagination, private history, detached execution, cancellation, terminal usage, integrity and SIGKILL/restart recovery with no implicit replay.",
+        "GOPROXY=off python3 integration/foundation.py: passed real HTTP/SQLite, complete migration ledger/drift rejection, FTS5/BM25, concurrent readiness, WAL/private DB, restart/persistence, extraction-tool readiness and sanitized configuration checks.",
+        "gofmt, whole-merge git diff --check and absence of tracked unit/widget tests: passed. Ephemeral ports and temporary databases used; runtime files remain ignored inside root worktree.",
+        "No paid/live provider calls repeated; approved historical DeepSeek evidence remains in docs/verification/T09.md. Shared dotenv not read. Flutter unchanged; no analyze/device work, push or deployment.",
+        "Research tools, coverage, hybrid RAG, report APIs and device UI remain successor-node verification; T09 is the bounded harness and registry integration."
+      ]
     }
   }
 }
