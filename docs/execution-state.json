@@ -94,6 +94,30 @@
         "gofmt and git diff --check: passed; no tracked unit/widget tests added or run. Flutter unchanged.",
         "Approved live arXiv evidence retained in docs/verification/T04.md; live provider checks not repeated during integration. Extraction, full reading and research-tool wiring remain outside T04 scope. Shared dotenv not read."
       ]
+    },
+    "T06": {
+      "status": "done",
+      "worktree": "/home/kotdath/omp/personal/ai/paper-scout-worktrees/T06",
+      "branch": "dag/t06",
+      "threads": {
+        "executor": "thr_qigjnc83fk",
+        "reviewer": "thr_rrr8wsstpw",
+        "simplifier": "thr_8c4ij6m8sq"
+      },
+      "base_sha": "838bb830ade663d366fb8883f70e5cce2b2aaa3c",
+      "approved_head_sha": "ba89c510f17bffa97fb52ade00812af561c25cbd",
+      "merge_sha": "46aa50ff1f5a38bde836c83c8355a3748667e4fd",
+      "checks": [
+        "Pre-merge: main clean at expected b1bdd59f41da9c4ec7ef984b6574cb48536cbd19; base ancestor; dag/t06 and clean task worktree at approved ba89c510f17bffa97fb52ade00812af561c25cbd; two review/fix cycles, simplification and final reviewer approval confirmed. Saved verify.patch matches source diff after trailing-newline normalization.",
+        "git merge --no-ff dag/t06: passed without conflicts; merge 46aa50ff1f5a38bde836c83c8355a3748667e4fd. Independent worktrees preserved.",
+        "go build -mod=readonly ./..., go vet -mod=readonly ./... and go mod verify: passed using existing root-worktree-local caches and GOPROXY=off.",
+        "integration/embeddings.py main(): passed with runtime redirected to existing root t01 cache; real client HTTP protocol, query/document encoding, hashes/order, normalization, immutable concurrent identity, metadata/digest drift, malformed vectors/responses, sanitized errors, limits, cancellation, deadlines and no hidden retries/redirects.",
+        "integration/embeddings.py main() --live: passed against existing local Ollama; pinned model/digest, real document and English/Russian query batches, four finite normalized 1024-dimensional vectors; oversized input explicitly rejected with HTTP 400 context_limit and no truncation.",
+        "Fresh go build -race ./integration/embeddings and fixture execution: passed, including concurrent requests; no race reports.",
+        "python3 integration/foundation.py: passed real HTTP/SQLite, FTS5/BM25, concurrent readiness, WAL, private database, restart/persistence, migration drift, extraction-tool readiness and sanitized configuration checks. Ephemeral ports and temporary databases used.",
+        "gofmt and whole-merge git diff --check: passed; no tracked unit/widget tests added or run.",
+        "Flutter unchanged; no device interaction or analyze needed. Shared dotenv not read; no paid provider calls or model downloads. Retrieval/indexing and ownership integration remain T08 scope."
+      ]
     }
   }
 }
