@@ -243,6 +243,29 @@
         "gofmt, whole-merge git diff --check and absence of tracked unit/widget tests: passed. Unit/widget tests not created or run. Shared dotenv not read; no paid DeepSeek calls, push or deployment.",
         "Flutter sources unchanged; analyze/device UI not repeated. Live retrieval uses synthetic article text; real arXiv articles, DeepSeek answers, full-reading analysis and end-to-end Flutter acceptance remain successor-node scope."
       ]
+    },
+    "T10": {
+      "status": "done",
+      "worktree": "/home/kotdath/omp/personal/ai/paper-scout-worktrees/T10",
+      "branch": "dag/t10",
+      "threads": {
+        "executor": "thr_5s39c45st2",
+        "reviewer": "thr_dpmuz6pdvg",
+        "simplifier": "thr_rqw5e4srbi"
+      },
+      "base_sha": "3cc924211792d67f37eaa1c93006b6c27d350036",
+      "approved_head_sha": "74047fd8c4b4c7497190c05c5a50d41feb4ecefd",
+      "merge_sha": "0ccfa8f447a755a06f16bf97eb011e22384219a4",
+      "checks": [
+        "Pre-merge: main clean at expected a62388556838f175668ef9594e800f5d9c277cfc; base 3cc924211792d67f37eaa1c93006b6c27d350036 ancestor; dag/t10 and clean task worktree at approved 74047fd8c4b4c7497190c05c5a50d41feb4ecefd. Both review/fix cycles, simplification and final reviewer approval confirmed; verify.patch matches approved diff after terminal-newline normalization.",
+        "git merge --no-ff dag/t10: passed without conflicts; merge 0ccfa8f447a755a06f16bf97eb011e22384219a4. Independent worktrees preserved.",
+        "go build -mod=readonly -o .bb/runtime/t10-integration/bin/ ./..., go vet -mod=readonly ./... and go mod verify: passed using existing root-local .bb/runtime/t01 caches and GOPROXY=off. No dependency changes.",
+        "integration/analysis.py main() with RUNTIME redirected to root .bb/runtime/t01: passed real HTTP ingestion, HTML/Poppler extraction, production SQLite migrations, exact Unicode ranges/input hashes, sequential analysis/synthesis/evidence, ownership, abstract_only/none, provider errors, request/token/context limits, cancellation and reopen/interrupted recovery without paid replay. Documents of 1.07/4.28 MB passed MaxRequests=1, cancellation and inaccessible unread-tail checks, with about 5.3/13.8 MB allocations in ordinary budget-limited cases.",
+        "Rebuilt integration/analysis and integration/agent with -mod=readonly -race and executed fixture modes in temporary root-worktree runtimes: passed without race reports. Harness checks cover coherent tool/history protocol, owner isolation, strict validation, limits/shared nested budgets, retries, cancellation, terminal finalization, SQLite integrity and persistence.",
+        "integration/foundation.py and integration/runs.py main() with RUNTIME redirected to root .bb/runtime/t01: passed real production HTTP/SQLite, full migration ledger/drift rejection, FTS5/BM25, WAL/private DB, sanitized config, owner isolation, strict inputs, concurrent idempotency/event sequence, capacity, durable cancellation/history/usage and SIGKILL/restart recovery of queued/running runs without implicit replay. Ephemeral ports and temporary databases used.",
+        "Changed Go files pass gofmt; whole-merge git diff --check passed; no tracked unit/widget tests. Unit/widget tests not created or run. Runtime/build files remain ignored, shared secret dotenv not read, no paid/provider live calls, push or deployment.",
+        "Flutter unchanged; analyze/device UI not repeated. Historical live evidence and limitations retained in docs/verification/T10.md: complete 28232-character analysis of arXiv 1301.3781v1; full analysis of 2304.03442v1 remains unconfirmed. Actual AgentRunner-to-analysis shared-budget callback wiring remains T11; research/API/Flutter end-to-end acceptance remains successor scope."
+      ]
     }
   }
 }
