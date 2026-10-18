@@ -316,6 +316,30 @@
         "Changed Go files pass gofmt; whole-merge git diff --check passed; no tracked unit/widget tests added or run. Ephemeral ports and temporary databases used; sanitized fixture/race artifacts remain ignored in .bb/runtime/t12-integration.",
         "Flutter unchanged; analyze/device UI not repeated. Approved historical live arXiv/DeepSeek evidence and its limits remain in docs/verification/T12.md; paid calls not repeated. Shared secret dotenv not read; no push or deployment. Full day-35 Flutter acceptance remains successor-node scope."
       ]
+    },
+    "T15": {
+      "status": "done",
+      "worktree": "/home/kotdath/omp/personal/ai/paper-scout-worktrees/T15",
+      "branch": "dag/t15",
+      "threads": {
+        "executor": "thr_cwuebu3egu",
+        "reviewer": "thr_pf93c72ghb",
+        "simplifier": "thr_iicztz837h"
+      },
+      "base_sha": "4afb01f386e1b0dc1c0930d7938d8cea9b1b49d0",
+      "approved_head_sha": "454ec93b535f326218ac8baed382ca6132998701",
+      "merge_sha": "631f1f488e7bce3093b306cacf14fbde04fd1bb6",
+      "checks": [
+        "Pre-merge: main clean at expected 4afb01f386e1b0dc1c0930d7938d8cea9b1b49d0; base ancestor; dag/t15 and clean task worktree at approved 454ec93b535f326218ac8baed382ca6132998701. Both review/fix cycles, simplification and final reviewer approval confirmed; verify.patch matches full approved diff after terminal-newline normalization.",
+        "git merge --no-ff dag/t15: passed without conflicts; merge 631f1f488e7bce3093b306cacf14fbde04fd1bb6. Integrated tree matches approved node head; independent worktrees preserved.",
+        "go build -mod=readonly -o .bb/runtime/t15/build/ ./..., go vet -mod=readonly ./... and go mod verify: passed with GOPROXY=off and root-local Go caches. No dependency changes.",
+        "GOPROXY=off python3 -B integration/check.py: 14/14 PASS on the merge commit; production server and integration executables built with -race -mod=readonly. No race diagnostics; no leftover suite directories. Summary retained in ignored .bb/runtime/t15/summary.json.",
+        "Foundation/accounts/deepseek/arxiv/documents/embeddings/runs/agent/analysis: passed real HTTP/SQLite/FTS5, migrations/drift, two-account ownership, full HTML/PDF extraction through Poppler, complete/partial/abstract-only coverage, registry/harness budgets, cancellation, persistence and recovery. External arXiv/article/DeepSeek boundaries use labeled HTTP fixtures.",
+        "retrieval-fixture/retrieval-live/researchtools/researchapi: passed known BM25 rank 1 plus dense rank 3 RRF score 1/61 + 1/63, real installed Qwen3 embeddings, hybrid follow-up/evidence, scope/compatibility/outage behavior, owner filtering, report transactions, pool/cancellation and saved/read/note persistence.",
+        "process: passed actual production OS-process cancellation with observed provider HTTP closure, bounded 503 retry and unknown usage, SIGKILL during an in-flight request, two restarts, single interrupted transition, persisted reports/history/profile/sessions, SQLite integrity and no automatic/idempotent provider replay.",
+        "Python AST parsing for five changed launchers, gofmt, whole-merge git diff --check and absence of tracked unit/widget tests, PDFs and MP4s: passed. Unit/widget tests not created or run. Ephemeral ports and temporary databases used; runtime artifacts remain ignored.",
+        "Official arXiv/DeepSeek live suite not run; no paid calls or shared dotenv reads. Flutter unchanged; analyze/device UI and day-35 end-to-end acceptance remain T16/T17 scope. No push or deployment."
+      ]
     }
   }
 }
