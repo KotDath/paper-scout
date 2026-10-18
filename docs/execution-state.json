@@ -144,6 +144,31 @@
         "gofmt and whole-integration git diff --check: PASS; no unit/widget test files added or run. Detailed integration result and limitations: docs/verification/T05.md.",
         "No new paid or live arXiv/HTML/PDF calls; earlier live evidence retained as historical evidence. Composition fixtures do not assert live source availability or full model reading. Flutter unchanged; no device work. Shared dotenv not read; no push/deployment."
       ]
+    },
+    "T07": {
+      "status": "done",
+      "worktree": "/home/kotdath/omp/personal/ai/paper-scout-worktrees/T07",
+      "branch": "dag/t07",
+      "threads": {
+        "executor": "thr_ybginnkp5n",
+        "reviewer": "thr_s8c9yiunwe",
+        "simplifier": "thr_m72662kbej"
+      },
+      "base_sha": "b1bdd59f41da9c4ec7ef984b6574cb48536cbd19",
+      "approved_head_sha": "b21887d9e46121c4507ed2dac27dccba86233e42",
+      "merge_sha": "74536f69841d82c89e4e88c6cbadbd3c01a8e017",
+      "checks": [
+        "Pre-merge: main clean at expected bea14f91abb33b16c847d14e511e8f7d361e9f2d; base ancestor; dag/t07 and clean task worktree at approved b21887d9e46121c4507ed2dac27dccba86233e42; two reviews, simplification and final reviewer approval confirmed; verify.patch matches approved diff.",
+        "git merge --no-ff dag/t07: passed without conflicts; merge 74536f69841d82c89e4e88c6cbadbd3c01a8e017. Independent worktrees preserved.",
+        "go build -mod=readonly ./..., go vet -mod=readonly ./... and go mod verify: passed using existing root-worktree-local caches and GOPROXY=off.",
+        "integration/runs.py main(): all seven groups passed, production entrypoint and lifecycle companion rebuilt with -race; real HTTP/SQLite, owner isolation, concurrent idempotency and event sequence, two-run capacity, strict inputs/pagination, private-history projection, detached execution context, durable cancellation, terminal states and usage, foreign keys and integrity.",
+        "integration/runs.py recovery: production process SIGKILL with queued runs and lifecycle worker SIGKILL with persisted running state; restart preserves auth/history/terminal results, recovers unfinished runs as interrupted exactly once and never implicitly replays; explicit new request succeeds. No race reports.",
+        "integration/accounts.py main(): passed real HTTP/SQLite two-account seed, bcrypt, authentication, profile isolation, owner injection rejection, concurrent reads, strict inputs, hashed tokens, logout/expiry, restart/persistence and no plaintext credentials in database.",
+        "integration/foundation.py main(): passed real HTTP/SQLite, complete migration ledger and drift rejection, FTS5/BM25, concurrent readiness, WAL, private DB permissions, restart/persistence, missing extraction tools and sanitized configuration checks.",
+        "All Python integrations used existing root .bb/runtime/t01 caches, ephemeral ports and temporary databases; disposable credentials remained in memory and were not printed. Shared dotenv not read.",
+        "gofmt and whole-merge git diff --check: passed; no tracked unit/widget tests added or run. Flutter unchanged. No paid/provider calls, device interaction, push or deployment.",
+        "T07 provides durable lifecycle/history only; new HTTP runs remain queued until T09/T12 execution is wired. DeepSeek, arXiv, Ollama, retrieval, reports and UI were not revalidated by this node."
+      ]
     }
   }
 }

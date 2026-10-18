@@ -8,7 +8,7 @@
     {"id":"T04","title":"arXiv adapter","depends_on":["T01"],"status":"done"},
     {"id":"T05","title":"HTML и PDF","depends_on":["T01"],"status":"done"},
     {"id":"T06","title":"EmbeddingClient Ollama","depends_on":["T01"],"status":"done"},
-    {"id":"T07","title":"Сессии run и история","depends_on":["T02"],"status":"todo"},
+    {"id":"T07","title":"Сессии run и история","depends_on":["T02"],"status":"done"},
     {"id":"T08","title":"Гибридный RAG","depends_on":["T02","T05","T06"],"status":"todo"},
     {"id":"T09","title":"AgentRunner","depends_on":["T03","T07"],"status":"todo"},
     {"id":"T10","title":"Полнотекстовый анализ","depends_on":["T03","T05","T07"],"status":"todo"},
