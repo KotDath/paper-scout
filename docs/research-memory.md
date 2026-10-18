@@ -646,6 +646,15 @@ Quote options — primary-read tool context, не automatic memory; полный
 подчиняется прежнему byte/token/request budget. Snapshot JSON + memory alias
 metadata повторно проверяются на общий предел 12000; overflow явный.
 
+Production grounded requests и Analyzer используют тот же DeepSeek client с
+`response_format={"type":"json_object"}` и temperature=0. Provider grammar
+не заменяет gate: schema, exact IDs, excerpts, ownership и budgets проверяются
+сервером. Empty/length/invalid provider responses не считаются успешными.
+Официальный контракт: https://api-docs.deepseek.com/guides/json_mode/ .
+Reference catalog содержит только current selected / issued / recalled papers;
+он не вводит названия прошлых исследований при memory-off. Обычный library search
+остаётся доступен как явный tool; каталог не объявляется полной библиотекой.
+
 No-tool final answer — JSON: scope, findings[{source,quote,conclusion}],
 comparisons[{memory,previous,previous_quote,current,current_quote,assessment,
 conclusion}], notes[], memory_reason, limitations[]. Максимум 6 findings,

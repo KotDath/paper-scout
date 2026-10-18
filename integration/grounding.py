@@ -53,12 +53,22 @@ class Provider(BaseHTTPRequestHandler):
             assert len(manifests) == 1
             manifest = json.loads(manifests[0])
             assert not any(p['paper_version_id']=='paper_private' for p in manifest['library_papers'])
+            if case == 'memory_off':
+                assert manifest['library_papers'] == [] and manifest['memory'] == [] and manifest['evidence'] == []
+                assert req.get('response_format') == {'type':'json_object'} and req.get('temperature') == 0
+                assert not any((m.get('content') or '').startswith('Research memory snapshots') for m in messages)
+                self.respond(self.response(json.dumps({'scope':'Explicit synthetic memory-off control','findings':[],
+                    'comparisons':[],'notes':[],'memory_reason':'Automatic research memory is disabled.',
+                    'limitations':['SYNTHETIC PROVIDER CONTROL, ZERO PAID CALLS']})))
+                return
             sources = {e['evidence_id']: e for e in manifest['evidence']}
             snapshots = [json.loads(m['content'].split(': ', 1)[1]) for m in messages
                          if (m.get('content') or '').startswith('Research memory snapshots')]
             hits = {h['memory_id']: h for s in snapshots for point in s for h in point['hits']}
             memories = {m['memory_id']: m for m in manifest['memory']}
             repairing = any((m.get('content') or '').startswith('ONE FINAL REPAIR') for m in messages)
+            assert req.get('response_format') == {'type':'json_object'}
+            assert req.get('temperature') == 0
             if case == 'replay':
                 assert not any('REJECTED_DRAFT' in (m.get('content') or '') for m in messages
                                if not (m.get('content') or '').startswith('ONE FINAL REPAIR'))
@@ -148,14 +158,17 @@ class Provider(BaseHTTPRequestHandler):
                 payload = self.response(json.dumps(draft, ensure_ascii=False))
                 if case == 'budget' and repairing:
                     payload['usage'] = {'prompt_tokens': 250000, 'completion_tokens': 10, 'total_tokens': 250010}
-            raw = json.dumps(payload).encode()
-            self.send_response(200); self.send_header('Content-Type', 'application/json')
-            self.send_header('Content-Length', str(len(raw))); self.end_headers(); self.wfile.write(raw)
+            self.respond(payload)
         except (BrokenPipeError, ConnectionResetError):
             pass
         except Exception as exc:
             type(self).failed = exc
             self.send_error(500)
+
+    def respond(self, payload):
+        raw = json.dumps(payload).encode()
+        self.send_response(200); self.send_header('Content-Type', 'application/json')
+        self.send_header('Content-Length', str(len(raw))); self.end_headers(); self.wfile.write(raw)
 
     @staticmethod
     def response(content, calls=None):
@@ -251,6 +264,24 @@ def main():
                 results[case] = {'status': state['status'], 'provider_requests': Provider.counts[case], 'rejected_drafts': rejected, 'accepted': accepted}
                 print('PASS', case, results[case])
                 if case=='note_injection':json_call(base,'PATCH','/api/v1/library/paper_a',token,{'note':NOTE})
+            # Same populated database, new dialogue: no unsolicited prior titles
+            # may leak through the reference catalog when recall is disabled.
+            stop(process)
+            env['RESEARCH_MEMORY_ENABLED'] = 'false'
+            process, base = start(binary, env)
+            token = login(base, 'ground-a', env['SEED_USER_1_PASSWORD'])['session_token']
+            conv = json_call(base, 'POST', '/api/v1/conversations', token, {'title':'T22 fixture memory off'}, 201)['id']
+            rid = json_call(base, 'POST', '/api/v1/conversations/'+conv+'/runs', token,
+                {'message':'T22_CASE: memory_off synthetic control','client_request_id':'memory_off'}, 202)['run_id']
+            state = wait_run(base, token, rid)
+            if Provider.failed:raise Provider.failed
+            assert state['status']=='completed'
+            report = json_call(base,'GET','/api/v1/reports/'+state['report_id'],token)
+            assert report['research_memory'] is None
+            with sqlite3.connect(env['SQLITE_PATH']) as db:
+                assert db.execute('SELECT count(*) FROM run_memory_snapshots WHERE run_id=?',(rid,)).fetchone()[0]==0
+            results['memory_off']={'status':'completed','provider_requests':Provider.counts['memory_off'],'automatic_catalog_empty':True}
+            print('PASS memory_off',results['memory_off'])
         finally:
             stop(process)
             provider.shutdown(); provider.server_close()

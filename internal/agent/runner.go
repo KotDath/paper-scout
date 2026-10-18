@@ -141,7 +141,7 @@ func (a *AgentRunner) RunWithFinalizer(ctx context.Context, owner, conversation,
 				messages = append(messages, deepseek.Text("user", repairHint))
 			}
 		}
-		request := deepseek.Request{Messages: messages, Tools: a.registry.Definitions(), MaxTokens: limits.OutputTokens}
+		request := deepseek.Request{Messages: messages, Tools: a.registry.Definitions(), MaxTokens: limits.OutputTokens, JSONOutput: a.grounded}
 		var response deepseek.Response
 		var callErr error
 		for attempt := 0; ; attempt++ {

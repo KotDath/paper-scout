@@ -47,6 +47,9 @@ type Request struct {
 	Messages  []Message
 	Tools     []Tool
 	MaxTokens int // required, 1..4096; includes reasoning tokens if thinking is enabled
+	// JSONOutput requests provider JSON-object grammar and temperature=0 for
+	// bounded structured analysis/repair. Validation still belongs to the caller.
+	JSONOutput bool
 }
 
 type Usage struct {

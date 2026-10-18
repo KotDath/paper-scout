@@ -122,7 +122,7 @@ func (a *Analyzer) step(ctx context.Context, owner, runID, id string, ordinal in
 	}
 	payload["response_contract"], _ = json.Marshal(contract)
 	input, _ := json.Marshal(payload)
-	request := deepseek.Request{Messages: []deepseek.Message{deepseek.Text("system", analysisInstructions), deepseek.Text("user", string(input))}, MaxTokens: a.cfg.OutputTokens}
+	request := deepseek.Request{Messages: []deepseek.Message{deepseek.Text("system", analysisInstructions), deepseek.Text("user", string(input))}, MaxTokens: a.cfg.OutputTokens, JSONOutput: true}
 	segmentID, err := a.prepare(ctx, id, ordinal, kind, p, request, ids)
 	if err != nil {
 		return nil, err

@@ -83,9 +83,10 @@ func (b *runBudget) complete(ctx context.Context, req deepseek.Request, assistan
 		req.MaxTokens = b.limits.OutputTokens
 	}
 	wire, marshalErr := json.Marshal(struct {
-		Messages []deepseek.Message
-		Tools    []deepseek.Tool
-	}{req.Messages, req.Tools})
+		Messages   []deepseek.Message
+		Tools      []deepseek.Tool
+		JSONOutput bool
+	}{req.Messages, req.Tools, req.JSONOutput})
 	if marshalErr != nil {
 		return deepseek.Response{}, &ToolError{Code: "invalid_request"}
 	}

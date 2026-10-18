@@ -83,7 +83,7 @@ func refHandle(run, kind, id string) string {
 	return kind + hex.EncodeToString(h[:6])
 }
 func (a *AgentRunner) grounding(ctx context.Context, r store.Run) (*grounding, error) {
-	g := &grounding{question: r.RequestMessage, evidence: map[string]sourceRef{}, memory: map[string]memoryRef{}}
+	g := &grounding{question: r.RequestMessage, library: []map[string]string{}, evidence: map[string]sourceRef{}, memory: map[string]memoryRef{}}
 	add := func(id string, read bool) error {
 		var e sourceRef
 		// Recheck ownership and coordinates against canonical storage. Text in a
@@ -204,7 +204,24 @@ func (a *AgentRunner) grounding(ctx context.Context, r store.Run) (*grounding, e
 			quotes[q.Handle] = binding
 		}
 	}
-	rows, err := a.db.DB.QueryContext(ctx, `SELECT p.id,p.title FROM user_papers u JOIN paper_versions p ON p.id=u.paper_version_id WHERE u.user_id=? ORDER BY u.added_at DESC,p.id LIMIT 21`, r.UserID)
+	// The catalog disambiguates issued/current sources; it must not itself
+	// introduce unrelated prior research when automatic memory is disabled.
+	accessible := map[string]bool{}
+	for _, e := range g.evidence {
+		accessible[e.Paper] = true
+	}
+	for _, m := range g.memory {
+		if m.Hit.PaperVersionID != "" {
+			accessible[m.Hit.PaperVersionID] = true
+		}
+	}
+	papers := []string{}
+	for id := range accessible {
+		papers = append(papers, id)
+	}
+	sort.Strings(papers)
+	paperJSON, _ := json.Marshal(papers)
+	rows, err := a.db.DB.QueryContext(ctx, `SELECT p.id,p.title FROM user_papers u JOIN paper_versions p ON p.id=u.paper_version_id WHERE u.user_id=? AND (p.id IN (SELECT value FROM json_each(?)) OR p.id IN (SELECT paper_version_id FROM run_sources WHERE run_id=?)) ORDER BY u.added_at DESC,p.id LIMIT 21`, r.UserID, string(paperJSON), r.ID)
 	if err != nil {
 		return nil, err
 	}
