@@ -95,8 +95,11 @@ def main():
             with sqlite3.connect(env["SQLITE_PATH"]) as db:
                 assert db.execute("PRAGMA journal_mode").fetchone() == ("wal",)
                 ledger = db.execute("SELECT * FROM schema_migrations").fetchall()
-                expected = sorted(path.name for path in (ROOT / "internal/store/migrations").glob("*.sql"))
-                assert sorted(row[0] for row in ledger) == ["migrations/" + name for name in expected]
+                expected_migrations = sorted(
+                    "migrations/" + path.name
+                    for path in (ROOT / "internal/store/migrations").glob("*.sql")
+                )
+                assert sorted(row[0] for row in ledger) == expected_migrations
                 assert ledger[0][0] == "migrations/T01_foundation.sql"
                 assert len(ledger[0][1]) == 64
                 # A real unrelated row must survive restart and migration replay.
