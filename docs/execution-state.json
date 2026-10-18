@@ -266,6 +266,30 @@
         "Changed Go files pass gofmt; whole-merge git diff --check passed; no tracked unit/widget tests. Unit/widget tests not created or run. Runtime/build files remain ignored, shared secret dotenv not read, no paid/provider live calls, push or deployment.",
         "Flutter unchanged; analyze/device UI not repeated. Historical live evidence and limitations retained in docs/verification/T10.md: complete 28232-character analysis of arXiv 1301.3781v1; full analysis of 2304.03442v1 remains unconfirmed. Actual AgentRunner-to-analysis shared-budget callback wiring remains T11; research/API/Flutter end-to-end acceptance remains successor scope."
       ]
+    },
+    "T11": {
+      "status": "done",
+      "worktree": "/home/kotdath/omp/personal/ai/paper-scout-worktrees/T11",
+      "branch": "dag/t11",
+      "threads": {
+        "executor": "thr_z93pcbaahi",
+        "reviewer": "thr_vsuuagcpha",
+        "simplifier": "thr_r2mzujdx7u"
+      },
+      "base_sha": "3c3228804d10c78c696f84a23040a79a262bc755",
+      "approved_head_sha": "bb6567a8a2d8025815d9aba45ede8aa6eb2ff2c3",
+      "merge_sha": "e543658f14d45448940deae0ee24e97cead6afac",
+      "checks": [
+        "Pre-merge: main clean at expected 3c3228804d10c78c696f84a23040a79a262bc755; base ancestor; dag/t11 and clean task worktree at approved bb6567a8a2d8025815d9aba45ede8aa6eb2ff2c3. Both review/fix cycles, simplification and final reviewer approval confirmed; verify.patch matches exact approved diff after terminal-newline normalization.",
+        "git merge --no-ff dag/t11: passed without conflicts; merge e543658f14d45448940deae0ee24e97cead6afac. Independent worktrees preserved.",
+        "go build -mod=readonly -o .bb/runtime/t11-integration/bin/ ./..., go vet -mod=readonly ./... and go mod verify: passed using existing root-local .bb/runtime/t01 caches with GOPROXY=off. No dependency changes.",
+        "integration/researchtools.py main() with RUNTIME redirected to root .bb/runtime/t01: passed real AgentRunner, registry, DeepSeek HTTP client, arXiv adapter, document extraction, Analyzer, production SQLite migrations and installed Qwen3/Ollama. External arXiv/article/DeepSeek HTTP boundaries use labeled fixtures; no paid live calls.",
+        "Research-tools integration: search/import/index, three sequential reading ranges and synthesis complete 17762/17762; same-session follow-up BM25 plus real Qwen3 dense retrieval and RRF, read_passages and original cited evidence; second owner isolated.",
+        "Adversarial integration: owner injection, invalid inputs/URLs and unselected/foreign evidence rejected; outer and nested calls share actual request cap, stopped before HTTP with partial prefix retained; repeated import preserves saved/read/note, three-source cap enforced, unavailable full text yields abstract_only, embedding outage explicitly yields failed index/lexical_only without false coverage promotion.",
+        "SQLite close/reopen preserves analysis coverage and coherent conversation history; integrity_check=ok. Ephemeral HTTP ports and disposable databases used.",
+        "Changed Go files pass gofmt; whole-merge git diff --check passed; unit/widget tests not added or run. Runtime/build files remain ignored. Shared dotenv not read; no push or deployment.",
+        "Flutter unchanged; analyze/device UI not repeated. Historical live arXiv/DeepSeek complete 28232/28232 and hybrid evidence plus limitations retained in docs/verification/T11.md; paid calls not repeated. Report API and thematic Flutter acceptance remain successor-node scope."
+      ]
     }
   }
 }
