@@ -8,16 +8,17 @@ import (
 	"time"
 
 	"paper-scout/internal/research"
+	"paper-scout/internal/retrieval"
 	"paper-scout/internal/store"
 )
 
 // New returns health and authenticated API routes.
-func New(db *store.Store) *http.ServeMux {
-	return NewWithRuns(db, research.New(context.Background(), db))
+func New(db *store.Store, services ...*retrieval.Service) *http.ServeMux {
+	return NewWithRuns(db, research.New(context.Background(), db), services...)
 }
 
 // NewWithRuns attaches the same lifecycle service used by background workers.
-func NewWithRuns(db *store.Store, runs *research.Service) *http.ServeMux {
+func NewWithRuns(db *store.Store, runs *research.Service, services ...*retrieval.Service) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
@@ -40,6 +41,11 @@ func NewWithRuns(db *store.Store, runs *research.Service) *http.ServeMux {
 	})
 	registerAuth(mux, db)
 	registerRuns(mux, db, runs)
+	service := retrieval.New(db.DB, nil)
+	if len(services) > 0 && services[0] != nil {
+		service = services[0]
+	}
+	RegisterRetrieval(mux, db, service)
 	return mux
 }
 
