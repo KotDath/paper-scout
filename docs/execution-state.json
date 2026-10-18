@@ -194,6 +194,31 @@
         "No paid/live provider calls repeated; approved historical DeepSeek evidence remains in docs/verification/T09.md. Shared dotenv not read. Flutter unchanged; no analyze/device work, push or deployment.",
         "Research tools, coverage, hybrid RAG, report APIs and device UI remain successor-node verification; T09 is the bounded harness and registry integration."
       ]
+    },
+    "T13": {
+      "status": "done",
+      "worktree": "/home/kotdath/omp/personal/ai/paper-scout-worktrees/T13",
+      "branch": "dag/t13",
+      "threads": {
+        "executor": "thr_9xg94w5nzu",
+        "reviewer": "thr_hnub7kkc9j",
+        "simplifier": "thr_srxq3c74x8"
+      },
+      "base_sha": "0d979a184033bb305b31cc9b09a03c79c9ba3cea",
+      "approved_head_sha": "6b657ac2907100fa497130e44fcd5b55b6783546",
+      "merge_sha": "183f2a30fbf4628306c6fc8852204116eec2fa98",
+      "checks": [
+        "Pre-merge: main clean at expected 26fe2213411642b79e9766fb2a235d45a0e182c6; base ancestor; dag/t13 and clean task worktree at approved 6b657ac2907100fa497130e44fcd5b55b6783546. Both review/fix cycles, simplification and final reviewer approval confirmed; verify.patch matches approved diff after terminal-newline normalization.",
+        "git merge --no-ff dag/t13: passed without conflicts; merge 183f2a30fbf4628306c6fc8852204116eec2fa98. Independent concurrent worktrees preserved.",
+        "go build -mod=readonly -o .bb/runtime/t13-integration/bin/ ./..., go vet -mod=readonly ./... and go mod verify: passed with existing root .bb/runtime/t01 caches and GOPROXY=off.",
+        "flutter pub get --offline, flutter analyze --no-pub, dart analyze ../integration/flutter_client.dart and dart format --output=none --set-exit-if-changed lib ../integration/flutter_client.dart: passed in root client; no dependency lock or source changes.",
+        "integration/flutter_client.py main(): passed production Dart transport -> actual integrated Go HTTP -> temporary SQLite; wrong-password 401, two account IDs, isolated profiles, logout 204, revoked-token protected 401 callback, cleared session and unaffected second account.",
+        "integration/accounts.py main(): passed atomic idempotent seed, bcrypt, login/me, ownership, concurrent reads, strict inputs, hashed token storage, logout, expiry, restart/persistence and absence of plaintext credentials in SQLite.",
+        "integration/foundation.py main(): passed real HTTP/SQLite, full migration ledger and drift rejection, FTS5/BM25, concurrent readiness, WAL/private database, restart/persistence, extraction-tool readiness and sanitized configuration.",
+        "Python integration launchers used RUNTIME redirected to root .bb/runtime/t01; ephemeral ports and temporary databases cleaned. Disposable credentials not logged, shared secret dotenv not read; no paid/provider calls.",
+        "Whole-merge git diff --check, Dart formatting and absence of tracked unit/widget test files: passed. No unit/widget tests created or run.",
+        "Approved Android APK build and claude-in-mobile evidence retained in docs/verification/T13.md: startup, configured/fallback origin, invalid port, two accounts, logout, protected 401, network failure and app restart. APK build/device UI checks not repeated during integration; merge leaves approved Flutter sources unchanged. Research screens and full day-35 acceptance remain successor scope."
+      ]
     }
   }
 }

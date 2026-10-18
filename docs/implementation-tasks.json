@@ -14,7 +14,7 @@
     {"id":"T10","title":"Полнотекстовый анализ","depends_on":["T03","T05","T07"],"status":"todo"},
     {"id":"T11","title":"Инструменты исследования","depends_on":["T04","T08","T09","T10"],"status":"todo"},
     {"id":"T12","title":"Research API и отчёты","depends_on":["T02","T11"],"status":"todo"},
-    {"id":"T13","title":"Flutter каркас и вход","depends_on":["T02"],"status":"todo"},
+    {"id":"T13","title":"Flutter каркас и вход","depends_on":["T02"],"status":"done"},
     {"id":"T14","title":"Исследование во Flutter","depends_on":["T12","T13"],"status":"todo"},
     {"id":"T15","title":"Интеграционные проверки","depends_on":["T12"],"status":"todo"},
     {"id":"T16","title":"Реальный сквозной проход","depends_on":["T14","T15"],"status":"todo"},
