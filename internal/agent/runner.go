@@ -85,6 +85,7 @@ func (a *AgentRunner) RunWithFinalizer(ctx context.Context, owner, conversation,
 	}
 	budget := &runBudget{db: a.db, client: a.client, owner: owner, run: id, ctx: runCtx, limits: limits}
 	status, code := "failed", ""
+	hasUsefulResult := false
 	scope := Scope{Owner: owner, ConversationID: conversation, RunID: id}
 	repeats := map[[32]byte]int{}
 	for {
@@ -141,7 +142,7 @@ func (a *AgentRunner) RunWithFinalizer(ctx context.Context, owner, conversation,
 		for i, call := range response.Message.ToolCalls {
 			if runCtx.Err() != nil {
 				code = failureCode(runCtx.Err())
-			} else if budget.usage.ToolCalls >= limits.ToolCalls {
+			} else if budget.exhausted() || budget.usage.ToolCalls >= limits.ToolCalls {
 				code = "budget_exceeded"
 			}
 			if code != "" {
@@ -216,6 +217,12 @@ func (a *AgentRunner) RunWithFinalizer(ctx context.Context, owner, conversation,
 				code = "persistence_error"
 				break
 			}
+			if toolCode == "" {
+				hasUsefulResult = true
+			}
+		}
+		if code == "" && budget.exhausted() {
+			code = "budget_exceeded"
 		}
 		if code != "" {
 			break
@@ -230,7 +237,7 @@ func (a *AgentRunner) RunWithFinalizer(ctx context.Context, owner, conversation,
 			code = "budget_exceeded"
 		}
 	}
-	if code == "budget_exceeded" && budget.usage.ToolCalls > 0 {
+	if code == "budget_exceeded" && hasUsefulResult {
 		status = "partial"
 	}
 	result.Usage = budget.usage

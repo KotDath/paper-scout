@@ -165,6 +165,10 @@ func main() {
 			if latest == "cancel" && toolResults == 0 {
 				calls = append(calls, mk("second", "inspect_profile", `{}`))
 			}
+		case "nested-token-limit":
+			if toolResults == 0 {
+				calls = []deepseek.ToolCall{mk("analyze", "analyze_fixture", `{}`), mk("after-analysis", "inspect_profile", `{}`), mk("last", "inspect_profile", `{}`)}
+			}
 		case "invalid":
 			if toolResults == 0 {
 				calls = []deepseek.ToolCall{mk("unknown", "no_such_tool", `{}`), mk("json", "inspect_profile", `{`), mk("fields", "inspect_profile", `{"owner":"b"}`), mk("null", "inspect_profile", `null`)}
@@ -206,6 +210,9 @@ func main() {
 		usage := deepseek.Usage{PromptTokens: 10, CompletionTokens: 5, TotalTokens: 15}
 		if latest == "tokens" {
 			usage = deepseek.Usage{PromptTokens: 249990, CompletionTokens: 10, TotalTokens: 250000}
+		}
+		if latest == "nested-tokens" {
+			usage = deepseek.Usage{PromptTokens: 249975, CompletionTokens: 10, TotalTokens: 249985}
 		}
 		json.NewEncoder(w).Encode(map[string]any{"id": fmt.Sprint(n), "model": "integration-model", "choices": []any{map[string]any{"message": message, "finish_reason": finish}}, "usage": usage})
 	}))
@@ -282,6 +289,19 @@ func main() {
 		start := executions.Load()
 		result, err = runWith(client, registry, l, newConversation(), message)
 		check(err != nil, "limit unexpectedly completed: "+scenario)
+		expectedStatus := "failed"
+		if scenario == "requests" || scenario == "repeat" {
+			expectedStatus = "partial"
+		}
+		check(result.Run.Status == expectedStatus, "limit misclassified useful work: "+scenario)
+		if scenario == "tools" {
+			check(executions.Load() == start && result.Usage.ToolCalls == 1, "rejected call accounting changed")
+			events, err := db.RunEvents(ctx, "a", result.Run.ID, 0, 100)
+			must(err)
+			for _, event := range events {
+				check(event.Type != "tool_started", "rejected call started execution")
+			}
+		}
 		if scenario == "context" {
 			check(result.Run.ErrorCode == "context_limit" && result.Usage.Requests == 0, "context limit sent provider request")
 		} else {
@@ -347,6 +367,51 @@ func main() {
 	l.Requests = 2
 	result, err = runWith(client, nestedRegistry, l, newConversation(), "nested")
 	check(err != nil && result.Usage.Requests == 2 && result.Usage.TotalTokens == 30, "nested call bypassed shared budget")
+	// A nested response exhausts the global token allowance while further calls
+	// are still pending in the same assistant turn. Even a callback that handles
+	// the nested error must not permit another tool or model request.
+	for _, preservePartial := range []bool{false, true} {
+		analyzing := tool
+		analyzing.Definition.Function.Name = "analyze_fixture"
+		var analyses int
+		analyzing.Execute = func(callCtx context.Context, s agent.Scope, raw json.RawMessage) (json.RawMessage, error) {
+			analyses++
+			response, err := s.Complete(callCtx, deepseek.Request{Messages: []deepseek.Message{deepseek.Text("user", "nested-tokens")}, MaxTokens: 64})
+			check(err != nil, "nested token exhaustion was not reported")
+			if preservePartial {
+				return json.Marshal(map[string]any{"observations": response.Message.Content})
+			}
+			return nil, err
+		}
+		reg, err := agent.NewRegistry(analyzing, tool)
+		must(err)
+		start := executions.Load()
+		result, err = runWith(client, reg, limits, newConversation(), "nested-token-limit")
+		check(err != nil && result.Run.ErrorCode == "budget_exceeded", "nested exhaustion did not stop run")
+		check(analyses == 1 && executions.Load() == start, "tool executed after nested token exhaustion")
+		check(result.Usage.Requests == 2 && result.Usage.ToolCalls == 1 && result.Usage.TotalTokens == 250000, "nested exhaustion accounting incorrect")
+		expected := "failed"
+		if preservePartial {
+			expected = "partial"
+		}
+		check(result.Run.Status == expected, "nested exhaustion misclassified useful work")
+		messages, err := db.Messages(ctx, "a", result.Run.ConversationID)
+		must(err)
+		check(len(messages) == 5, "nested exhaustion lost matching tool results")
+		for i, id := range []string{"after-analysis", "last"} {
+			check(messages[i+3].ToolCallID == id && strings.Contains(*messages[i+3].Content, "budget_exceeded"), "pending tool lacks non-execution result")
+		}
+		events, err := db.RunEvents(ctx, "a", result.Run.ID, 0, 100)
+		must(err)
+		started := 0
+		for _, event := range events {
+			if event.Type == "tool_started" {
+				started++
+			}
+		}
+		check(started == 1, "pending tool started after nested token exhaustion")
+	}
+	fmt.Println("PASS: nested token exhaustion stops remaining calls, preserves original skipped IDs and accounting, and distinguishes successful partial work")
 	// Context deadlines are propagated to tool code, then recorded as failures.
 	timeoutTool := tool
 	timeoutTool.Execute = func(callCtx context.Context, s agent.Scope, raw json.RawMessage) (json.RawMessage, error) {

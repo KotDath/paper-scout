@@ -36,8 +36,11 @@ The per-tool timeout is separate from the overall run deadline.
 entry point. It uses the same client, serializes requests, intersects caller,
 tool and run cancellation, clamps output size and charges the same request/token
 budget. Pass this function to the analyzer adapter; do not construct another
-DeepSeek client or call an unbudgeted client from a tool. Nested responses remain
-private events, not assistant turns in the outer conversation.
+DeepSeek client or call an unbudgeted client from a tool. Shared request/token
+budget exhaustion remains terminal even if a tool handles its nested-call error:
+pending calls receive non-execution results and no further actions start.
+Nested responses remain private events, not assistant turns in the outer
+conversation.
 
 ## Execution and persistence
 
@@ -71,8 +74,12 @@ cancellation or limits. Canonical identical arguments execute at most twice.
 Malformed/unknown/blocked calls also consume the finite tool-call allowance.
 
 Cancellation persistence uses fresh five-second contexts. Cancellation wins the
-terminal state race. A limit after tools can produce `partial`; a failed turn
-without useful work is `failed`. Successful final text is durable in messages.
+terminal state race. A limit produces `partial` only after a successful tool
+result has been durably saved. Charged calls rejected by validation, failed
+execution or invalid output do not count as useful work and leave `failed`.
+Tools with usable partial observations should return them as successful JSON;
+the registry cannot infer scientific usefulness from arbitrary tool data.
+Successful final text is durable in messages.
 Public events contain codes/identifiers, not provider bodies, reasoning, errors
 or article text. The existing API projection continues to hide private fields.
 

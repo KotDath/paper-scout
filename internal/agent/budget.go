@@ -46,13 +46,22 @@ type Usage struct {
 }
 
 type runBudget struct {
-	mu         sync.Mutex
-	db         *store.Store
-	client     *deepseek.DeepSeekClient
-	owner, run string
-	ctx        context.Context
-	limits     Limits
-	usage      Usage
+	mu            sync.Mutex
+	db            *store.Store
+	client        *deepseek.DeepSeekClient
+	owner, run    string
+	ctx           context.Context
+	limits        Limits
+	usage         Usage
+	limitExceeded bool
+}
+
+// Once admission or actual usage reaches a global limit, a tool cannot clear
+// that condition by handling its nested Complete error and returning success.
+func (b *runBudget) exhausted() bool {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.limitExceeded || b.usage.TotalTokens+b.usage.UnknownTokenReserve >= b.limits.Tokens
 }
 
 func (b *runBudget) save(kind string, public, private any, message *store.Message) error {
@@ -83,7 +92,8 @@ func (b *runBudget) complete(ctx context.Context, req deepseek.Request, assistan
 		return deepseek.Response{}, &ToolError{Code: "context_limit"}
 	}
 	// Byte count is a deliberately conservative input-token estimate, not billing.
-	if b.usage.Requests >= b.limits.Requests || b.usage.TotalTokens+b.usage.UnknownTokenReserve+len(wire)+req.MaxTokens > b.limits.Tokens {
+	if b.limitExceeded || b.usage.Requests >= b.limits.Requests || b.usage.TotalTokens+b.usage.UnknownTokenReserve+len(wire)+req.MaxTokens > b.limits.Tokens {
+		b.limitExceeded = true
 		return deepseek.Response{}, &ToolError{Code: "budget_exceeded"}
 	}
 	if err := b.ctx.Err(); err != nil {
@@ -128,8 +138,11 @@ func (b *runBudget) complete(ctx context.Context, req deepseek.Request, assistan
 	if saveErr := b.save("model_request_finished", map[string]any{"request": b.usage.Requests, "error_code": code}, map[string]any{"response": response}, message); saveErr != nil {
 		return response, saveErr
 	}
-	if err == nil && b.usage.TotalTokens+b.usage.UnknownTokenReserve >= b.limits.Tokens {
-		err = &ToolError{Code: "budget_exceeded"}
+	if b.usage.TotalTokens+b.usage.UnknownTokenReserve >= b.limits.Tokens {
+		b.limitExceeded = true
+		if err == nil {
+			err = &ToolError{Code: "budget_exceeded"}
+		}
 	}
 	return response, err
 }
