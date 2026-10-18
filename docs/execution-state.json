@@ -457,6 +457,30 @@
         "Progress JSON preserves all other nodes; T19 task status and execution state updated in a separate metadata commit. No tracked unit/widget tests, credentials, runtime, PDF or video artifacts added. Unit/widget tests were not created or run; sanitized logs remain ignored under .bb/runtime.",
         "Flutter and AgentRunner sources unchanged; Flutter analyze/device UI and automatic recall/live acceptance T20-T22 are outside this integration. Secret-bearing dotenv not read; no push or deployment."
       ]
+    },
+    "T20": {
+      "status": "done",
+      "worktree": "/home/kotdath/omp/personal/ai/paper-scout-worktrees/T20",
+      "branch": "dag/t20",
+      "threads": {
+        "executor": "thr_gpztvudr9u",
+        "reviewer": "thr_r8k8qsrrfz",
+        "simplifier": "thr_wrevqkxwhu"
+      },
+      "base_sha": "67c5f5c788840b048c4c044eee254f7216f1ca0f",
+      "approved_head_sha": "2e22571ba29f421c43c4b4401ac4b753ea6e36a3",
+      "merge_sha": "c3f4fadca9e8b282d0dd759a4e37d3b3da045413",
+      "checks": [
+        "Pre-merge: clean main at expected 67c5f5c788840b048c4c044eee254f7216f1ca0f; base ancestor; clean dag/t20 worktree at approved 2e22571ba29f421c43c4b4401ac4b753ea6e36a3. Both review/fix cycles, simplification and final reviewer approval confirmed; verify.patch matches approved diff except terminal newline.",
+        "git merge --no-ff dag/t20: PASS without conflicts; merge c3f4fadca9e8b282d0dd759a4e37d3b3da045413. Merge tree exactly matches approved node head. Independent worktree registrations/branches preserved; inactive heads unchanged; no edits to active T21.",
+        "GOPROXY=off go build -mod=readonly -o .bb/runtime/t20-integration/bin/ ./..., go vet -mod=readonly ./... and go mod verify: PASS using existing root-local caches. Go dependency files unchanged.",
+        "GOPROXY=off python3 -B integration/agentmemory.py: PASS with ordinary production cmd/paper-scout, real SQLite/auth/agent/tools and installed Qwen3. Synthetic scientific origins and external DeepSeek HTTP fixture are explicit; no paid calls. First-request recall after restart, exactly two automatic recall points, original A/B passages, snapshot/event/model-boundary equality, validated recalled/referenced IDs, current notes/corrections, owner isolation, empty result, cancellation without report, read/capture failures and durable capture recovery without replay, memory-off control passed. Actual Go JSON measured 5758/6000 and 11736/12000 characters; original request retained.",
+        "T19 integration/researchmemory built/run with -race -mod=readonly: PASS, 32 real Qwen3 requests, no race diagnostics. Capture/ADD/NOOP, revision/correction/exclusion/restore/rebuild, note edit/clear and inference races, pending backlog, ownership, cutoff/current-run filters, complete annotation groups, provenance/origin budgets and outage/cancellation passed. Fresh local database disposed; sanitized ranks/log retained ignored.",
+        "GOPROXY=off python3 -B integration/check.py: initial 13/14 PASS; process exposed obsolete expectation that run_finished is the final event, incompatible with documented post-commit memory_captured. Integration-only fix c3356c476937fd173aa9be5617a649656ad5b121 preserves adjacent report_saved/run_finished and permits only one following memory_captured. python3 -B integration/check.py --only process then PASS (1/1); all 14 groups have passing results, original failure retained in full summary. Production/integration binaries built with -race -mod=readonly; real SQLite/Poppler/Qwen3; arXiv/DeepSeek boundaries explicitly use HTTP fixtures.",
+        "Process rerun: in-flight HTTP cancellation, bounded 503 retry/unknown usage, SIGKILL during provider request, two OS-process restarts, single interrupted transition, persisted reports/history/profile/auth, SQLite integrity and no automatic/idempotent provider replay: PASS. No race diagnostics. Ephemeral ports and disposable suite databases used.",
+        "Changed Go formatting, Python AST parsing, whole-integration git diff --check, absence of tracked unit/widget tests/credentials/runtime/PDF/video artifacts and progress JSON preservation: PASS. T20 status/execution state committed separately from merge and process-check fix. Unit/widget tests not created or run.",
+        "Flutter sources unchanged; analyze/device UI, real-article scientific acceptance and new video remain T21/T22 scope. Historical bounded live smoke and limitations retained in docs/verification/T20.md. Shared secret-bearing dotenv not read; no new paid live calls, push or deployment."
+      ]
     }
   }
 }
