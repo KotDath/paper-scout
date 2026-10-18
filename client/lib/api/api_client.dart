@@ -34,6 +34,9 @@ class ApiClient {
         (uri.path.isNotEmpty && uri.path != '/')) {
       throw const ApiException('Укажите адрес сервера: http://127.0.0.1:8080');
     }
+    if (uri.port < 1 || uri.port > 65535) {
+      throw const ApiException('Порт сервера должен быть от 1 до 65535.');
+    }
     return uri.replace(path: '/', query: null, fragment: null);
   }
 
