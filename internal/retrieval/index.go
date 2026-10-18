@@ -143,15 +143,6 @@ func errorCode(err error) string {
 	return "index_error"
 }
 
-type statusWriter interface {
-	ExecContext(context.Context, string, ...any) (sql.Result, error)
-}
-
-func writeStatus(ctx context.Context, db statusWriter, status IndexStatus, id embeddings.Identity, chunking string) error {
-	_, err := db.ExecContext(ctx, `INSERT INTO document_indexes(document_id,model_id,model_digest,encoding_version,dimensions,chunking_version,indexed_chunks,total_chunks,status,last_error,updated_at)
- VALUES (?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(document_id) DO UPDATE SET model_id=excluded.model_id,model_digest=excluded.model_digest,encoding_version=excluded.encoding_version,dimensions=excluded.dimensions,chunking_version=excluded.chunking_version,indexed_chunks=excluded.indexed_chunks,total_chunks=excluded.total_chunks,status=excluded.status,last_error=excluded.last_error,updated_at=excluded.updated_at`, status.DocumentID, id.Model, id.Digest, id.EncodingVersion, id.Dimensions, chunking, status.IndexedChunks, status.TotalChunks, status.Status, status.LastError, time.Now().UTC().Format(time.RFC3339Nano))
-	return err
-}
 func (s *Service) saveVectors(ctx context.Context, items []chunk, id embeddings.Identity) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -246,7 +237,9 @@ func (s *Service) saveStatus(ctx context.Context, status *IndexStatus, id embedd
 			return err
 		}
 	}
-	if err = writeStatus(ctx, tx, updated, id, currentChunking); err != nil {
+	_, err = tx.ExecContext(ctx, `INSERT INTO document_indexes(document_id,model_id,model_digest,encoding_version,dimensions,chunking_version,indexed_chunks,total_chunks,status,last_error,updated_at)
+ VALUES (?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(document_id) DO UPDATE SET model_id=excluded.model_id,model_digest=excluded.model_digest,encoding_version=excluded.encoding_version,dimensions=excluded.dimensions,chunking_version=excluded.chunking_version,indexed_chunks=excluded.indexed_chunks,total_chunks=excluded.total_chunks,status=excluded.status,last_error=excluded.last_error,updated_at=excluded.updated_at`, updated.DocumentID, id.Model, id.Digest, id.EncodingVersion, id.Dimensions, currentChunking, updated.IndexedChunks, updated.TotalChunks, updated.Status, updated.LastError, time.Now().UTC().Format(time.RFC3339Nano))
+	if err != nil {
 		return err
 	}
 	if err = tx.Commit(); err != nil {
