@@ -124,9 +124,7 @@ func (a *AgentRunner) RunWithFinalizer(ctx context.Context, owner, conversation,
 			// Even rejected/truncated assistant calls get matching non-execution results
 			// for the audit trail. This run will not be replayed as a completed turn.
 			if response.Message.Role == "assistant" {
-				if skipErr := a.skipCalls(budget, response.Message.ToolCalls, code); skipErr != nil {
-					code = "persistence_error"
-				}
+				code = a.skipCalls(budget, response.Message.ToolCalls, code)
 			}
 			break
 		}
@@ -146,9 +144,7 @@ func (a *AgentRunner) RunWithFinalizer(ctx context.Context, owner, conversation,
 				code = "budget_exceeded"
 			}
 			if code != "" {
-				if skipErr := a.skipCalls(budget, response.Message.ToolCalls[i:], code); skipErr != nil {
-					code = "persistence_error"
-				}
+				code = a.skipCalls(budget, response.Message.ToolCalls[i:], code)
 				break
 			}
 			budget.usage.ToolCalls++
@@ -205,9 +201,7 @@ func (a *AgentRunner) RunWithFinalizer(ctx context.Context, owner, conversation,
 				}
 			}
 			if code != "" {
-				if skipErr := a.skipCalls(budget, response.Message.ToolCalls[i:], code); skipErr != nil {
-					code = "persistence_error"
-				}
+				code = a.skipCalls(budget, response.Message.ToolCalls[i:], code)
 				break
 			}
 			if toolCode != "" {
@@ -266,13 +260,15 @@ func (a *AgentRunner) toolMessage(b *runBudget, call deepseek.ToolCall, output j
 	}
 	return b.save(kind, map[string]any{"tool": call.Function.Name, "call_id": call.ID, "error_code": code}, nil, &store.Message{Role: "tool", Content: &text, ToolCallID: call.ID})
 }
-func (a *AgentRunner) skipCalls(b *runBudget, calls []deepseek.ToolCall, code string) error {
+
+// skipCalls retains the stop code unless journaling a skipped call fails.
+func (a *AgentRunner) skipCalls(b *runBudget, calls []deepseek.ToolCall, code string) string {
 	for _, call := range calls {
 		if err := a.toolMessage(b, call, errorResult(code), code); err != nil {
-			return err
+			return "persistence_error"
 		}
 	}
-	return nil
+	return code
 }
 func (a *AgentRunner) finish(result Result, status, code string) (Result, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
