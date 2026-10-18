@@ -1,0 +1,6 @@
+{
+  "schema_version": 1,
+  "target_branch": "main",
+  "protocol": "isolated-worktree-two-reviews-simplify-merge",
+  "nodes": {}
+}

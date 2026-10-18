@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "scope": "day35",
+  "tasks": [
+    {"id":"T01","title":"Go foundation и SQLite","depends_on":[],"status":"todo"},
+    {"id":"T02","title":"Аккаунты и ownership","depends_on":["T01"],"status":"todo"},
+    {"id":"T03","title":"DeepSeekClient","depends_on":["T01"],"status":"todo"},
+    {"id":"T04","title":"arXiv adapter","depends_on":["T01"],"status":"todo"},
+    {"id":"T05","title":"HTML и PDF","depends_on":["T01"],"status":"todo"},
+    {"id":"T06","title":"EmbeddingClient Ollama","depends_on":["T01"],"status":"todo"},
+    {"id":"T07","title":"Сессии run и история","depends_on":["T02"],"status":"todo"},
+    {"id":"T08","title":"Гибридный RAG","depends_on":["T02","T05","T06"],"status":"todo"},
+    {"id":"T09","title":"AgentRunner","depends_on":["T03","T07"],"status":"todo"},
+    {"id":"T10","title":"Полнотекстовый анализ","depends_on":["T03","T05","T07"],"status":"todo"},
+    {"id":"T11","title":"Инструменты исследования","depends_on":["T04","T08","T09","T10"],"status":"todo"},
+    {"id":"T12","title":"Research API и отчёты","depends_on":["T02","T11"],"status":"todo"},
+    {"id":"T13","title":"Flutter каркас и вход","depends_on":["T02"],"status":"todo"},
+    {"id":"T14","title":"Исследование во Flutter","depends_on":["T12","T13"],"status":"todo"},
+    {"id":"T15","title":"Интеграционные проверки","depends_on":["T12"],"status":"todo"},
+    {"id":"T16","title":"Реальный сквозной проход","depends_on":["T14","T15"],"status":"todo"},
+    {"id":"T17","title":"Видео с эмулятора","depends_on":["T16"],"status":"todo"},
+    {"id":"T18","title":"Итоговая сдача и runbook","depends_on":["T17"],"status":"todo"}
+  ]
+}
