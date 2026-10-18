@@ -126,3 +126,50 @@ old disposable app through Android Settings using the mobile UI tools.
 Actual scope, commands, results and live verification gaps:
 [T14 verification](../docs/verification/T14.md). The day-35 acceptance and video
 remain separate DAG tasks T16–T18.
+
+## Research memory (T21)
+
+Reports may include nullable `research_memory` with `retrieval_mode`, `reasons`,
+`recalled` and `referenced` (arrays of the T19 Hit contract). Historical reports
+without this field still open. **Найдено в прошлых исследованиях** shows the
+immutable materials issued to that run; **Ссылки в ответе** shows only server
+validated references. A recalled item alone does not establish use in the answer.
+Only markers present in `referenced` receive a memory navigation button.
+
+Open an entry to inspect current provenance, coverage, notes, corrections and
+revision, then follow its report, paper/note or original evidence. Returning keeps
+the selected run, including a manually selected older run. Every report fetches current notes/corrections for its whole episode and derived
+claims via `GET /api/v1/reports/{id}/research-memory`, including when opened
+directly from conversation history or through a different card. These current
+annotations remain separate from immutable report text and the run snapshot.
+Correction and exclusion/restore use `expected_revision`; after a failed PATCH,
+reload the current revision before explicitly resubmitting the preserved draft.
+User corrections are edited through their target, as required by T19. Notes remain
+in the existing paper editor with an explanation of their future use as personal
+context. Memory previews/navigation live in the account widget tree and are
+removed on logout/401.
+
+Run the repository integration, then optionally serve for device interaction:
+
+```sh
+python3 integration/flutter_memory.py
+python3 integration/flutter_memory.py --ui
+```
+
+Use a worktree-local Flutter/Dart and build caches as described above. The launcher
+uses port 0 and a temporary SQLite database. It needs the real installed Qwen3 at
+`127.0.0.1:11434`, but no dotenv, DeepSeek or arXiv. Research content and the optional
+T20 report snapshot are **explicit fixtures**, using real HTTP auth, memory
+GET/PATCH/search and SQLite. Fixture accounts are `owner_a` / `owner_b`, with public
+disposable input credentials in the harness; never reuse them outside integration.
+Add an adb reverse rule for the printed port and enter that origin in Flutter.
+
+In account A, conversation **b** contains a newer failed run and an older completed
+run: select the completed run to open the snapshot. Its two different claims and note point to **a**; a correction to either claim
+must appear when report **a** is opened from history or via the other claim.
+Reports **c/d** deliberately supply empty lexical-only / hybrid-partial snapshots,
+with `T21_MODE_HTTP_FIXTURE_NO_REAL_OUTAGE`; **a/e** omit / null the extension.
+These fixtures verify presentation, not automatic recall or live scientific
+comparison. Device input/navigation uses only claude-in-mobile. Stop with SIGTERM
+or Ctrl-C to remove the temporary database. Exact checks and limits:
+[T21 verification](../docs/verification/T21.md).

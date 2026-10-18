@@ -589,3 +589,24 @@ credentials/provider reasoning в них не пишутся. Note edits акт�
 доступным. Это переключатель эксперимента, а не автоматический fallback.
 
 Проверки и точные live-ограничения: [verification/T20.md](verification/T20.md).
+
+## T21: актуальные аннотации всего отчёта (review1 fix)
+
+`GET /api/v1/reports/{report_id}/research-memory` — authenticated owner-scoped
+read, независимый от navigation memory ID, search/top-k и снимка run. Ответ:
+`{"report_id":"...","items":[Entry]}`. Items — текущие disputed/excluded
+episode/claim targets этого отчёта и связанные актуальные notes/corrections,
+дедуплицированные по memory ID. `excluded` сохраняется явно; собственные origins,
+authority и revision берутся из T19. Passages/annotations внутри этих Entry —
+пустые массивы: полный текст/история выбранной записи доступны через прежний GET.
+
+Связь строится по owner + report episode / research_memory_origins всех derived
+claims, включая исключённые записи. Выполняется bounded идемпотентный Capture
+именно этого отчёта и обычный bounded Refresh заметок, без DeepSeek/embeddings.
+Чтение связей и пользовательских ревизий — в одном SQL snapshot. Чужой и
+отсутствующий report одинаково 404; нет сессии 401; pending 503. Максимум 128
+связанных targets и 2 MiB JSON; превышение — явный `memory_scope_limit`, а не
+успешный ответ без части поправок. Остальные ограничения чтения T19 сохраняются.
+При ошибке Flutter показывает недоступность аннотаций рядом с исходным отчётом,
+не «поправок нет». Markdown и nullable historical research_memory не меняются.
+Это дополнительный read adapter T21, не изменение Go-agent или T20 recall.
