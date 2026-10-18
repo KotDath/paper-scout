@@ -12,11 +12,13 @@ import (
 )
 
 type Service struct {
-	db     *store.Store
-	parent context.Context
-	mu     sync.Mutex
-	active map[string]context.CancelFunc
-	closed bool
+	db      *store.Store
+	parent  context.Context
+	mu      sync.Mutex
+	active  map[string]context.CancelFunc
+	closed  bool
+	execute func(context.Context, store.Run)
+	workers sync.WaitGroup
 }
 
 func New(parent context.Context, db *store.Store) *Service {
@@ -29,7 +31,21 @@ func (s *Service) Create(ctx context.Context, owner, conversation, requestID, me
 	if s.closed || s.parent.Err() != nil {
 		return store.Run{}, false, context.Canceled
 	}
-	return s.db.CreateRun(ctx, owner, conversation, requestID, message)
+	r, created, err := s.db.CreateRun(ctx, owner, conversation, requestID, message)
+	if err == nil && created && s.execute != nil {
+		s.workers.Add(1)
+		execute := s.execute
+		go func() { defer s.workers.Done(); execute(s.parent, r) }()
+	}
+	return r, created, err
+}
+
+// SetExecutor attaches the application worker before serving requests. A nil
+// executor preserves the manual lifecycle used by lower-level integrations.
+func (s *Service) SetExecutor(execute func(context.Context, store.Run)) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.execute = execute
 }
 
 // Start creates a deadline from server lifetime, never from the short-lived
@@ -88,3 +104,6 @@ func (s *Service) Close() {
 		delete(s.active, id)
 	}
 }
+
+// Wait is called after HTTP shutdown/Close and before closing SQLite.
+func (s *Service) Wait() { s.workers.Wait() }

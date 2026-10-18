@@ -69,12 +69,18 @@ func fixtures(db *store.Store) (string, *http.Client, deepseek.Config, func()) {
 		finish := "stop"
 		if len(input.Tools) == 0 {
 			var packet struct {
-				Data struct {
+				Question string `json:"question"`
+				Data     struct {
+					Start    int                 `json:"char_start"`
 					Passages []research.Evidence `json:"passages"`
 				} `json:"article_data"`
 				Observations []research.Observations `json:"observations"`
 			}
 			decode(*input.Messages[len(input.Messages)-1].Content, &packet)
+			if packet.Question == "T12_PENDING" && packet.Data.Start > 0 {
+				<-r.Context().Done()
+				return
+			}
 			var id string
 			if len(packet.Data.Passages) > 0 {
 				id = packet.Data.Passages[0].ID
@@ -102,7 +108,12 @@ func fixtures(db *store.Store) (string, *http.Client, deepseek.Config, func()) {
 			}
 			var calls []deepseek.ToolCall
 			switch {
-			case strings.HasPrefix(prompt, "T11_PRIMARY"):
+			case strings.HasPrefix(prompt, "T12_SLOW"):
+				<-r.Context().Done()
+				return
+			case strings.HasPrefix(prompt, "T12_FAIL_REPORT"):
+				message = deepseek.Text("assistant", "T12_FAIL_REPORT")
+			case strings.HasPrefix(prompt, "T11_PRIMARY"), strings.HasPrefix(prompt, "T12_PENDING"):
 				switch len(outputs) {
 				case 0:
 					calls = []deepseek.ToolCall{call("search_papers", map[string]any{"query": "ti:memory", "limit": 1})}
@@ -115,7 +126,11 @@ func fixtures(db *store.Store) (string, *http.Client, deepseek.Config, func()) {
 						} `json:"paper"`
 					}
 					decode(outputs[1], &out)
-					calls = []deepseek.ToolCall{call("analyze_paper", map[string]string{"paper_version_id": out.Paper.ID, "question": "Memory methods and limitations?"})}
+					question := "Memory methods and limitations?"
+					if strings.HasPrefix(prompt, "T12_PENDING") {
+						question = "T12_PENDING"
+					}
+					calls = []deepseek.ToolCall{call("analyze_paper", map[string]string{"paper_version_id": out.Paper.ID, "question": question})}
 				default:
 					message = deepseek.Text("assistant", "Полный анализ complete. "+firstEvidence(outputs[2]))
 				}
