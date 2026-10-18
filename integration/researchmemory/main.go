@@ -453,6 +453,9 @@ func run(dir string) error {
 	if err = fallback(ctx, db, memory); err != nil {
 		return err
 	}
+	if err = review1(ctx, db, memory, server.URL, tokens["owner_a"], &hook); err != nil {
+		return err
+	}
 	data, _ := json.MarshalIndent(first, "", "  ")
 	if err = os.WriteFile(filepath.Join(dir, "hybrid.json"), data, 0600); err != nil {
 		return err

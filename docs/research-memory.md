@@ -344,7 +344,13 @@ papers; они могут увеличить длину hits сверх limit. �
 Текущая note (до существующих 10000 символов) передаётся целиком, даже когда
 поиск выбрал лишь её passage. Сначала проверяется стоимость обязательных
 annotations: если группа вместе с ними не помещается, пропускается обычный hit,
-correction не обрезается и не скрывается. Причина — `context_budget`. Причины
+correction не обрезается и не скрывается. Это включает поправки к самим
+присоединённым user_note: сначала строится вся обязательная группа
+claim → note → correction, затем рассчитывается её бюджет. Причина пропуска
+слишком большой группы — `context_budget`. Поиск связей может просмотреть все
+origins консолидированного claim, чтобы найти поправку к пропущенному эпизоду;
+в опубликованных annotations остаются только origins, уже допущенные для группы,
+и общий предел пяти различных reports не увеличивается. Причины
 `capture_backlog`, `episode_projection_truncated`, `claim_projection_truncated`,
 `claim_evidence_unavailable`, `origin_budget`, `source_changed`,
 `index_incomplete_or_incompatible` и коды существующего EmbeddingClient явные.
@@ -369,7 +375,13 @@ user authority; target получает `disputed` и новую revision. Ст�
 также увеличивает target revision и сохраняет snapshot. Старая revision=409
 `revision_conflict`; чужой/несуществующий ID=404 `not_found`; нет сессии=401.
 Некорректный JSON/действие=400 `invalid_input`; сбой памяти=503
-`memory_unavailable`, а не пустая история. Context/cancellation передаются всем
+`memory_unavailable`, а не пустая история. Если обязательная заметка ещё ждёт
+проекции (включая backlog после 16 note jobs или правку во время inference),
+возвращается `ErrPending` / HTTP503 `memory_pending`, retryable=true. Это также
+относится к устаревшей доступной владельцу note в GET/PATCH: состояние не
+выдаётся за отсутствие ресурса. Search не публикует claim без актуальной
+обязательной заметки; следующий bounded Refresh может завершить проекцию.
+Context/cancellation передаются всем
 операциям; сетевые вызовы используют существующие пределы EmbeddingClient.
 
 Проекция защищена консервативно: свободные episode passages пользователя не

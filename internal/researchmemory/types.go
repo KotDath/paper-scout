@@ -16,6 +16,9 @@ const MaxScopePassages = 20000
 
 var ErrInvalid = errors.New("invalid memory input")
 var ErrConflict = errors.New("memory revision conflict")
+
+// ErrPending means a mandatory current note or correction is not ready.
+var ErrPending = errors.New("memory annotation projection pending")
 var ErrScope = errors.New("memory scope limit")
 
 type Service struct {

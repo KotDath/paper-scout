@@ -38,7 +38,7 @@ func loadEntry(ctx context.Context, q querier, owner, id string) (Entry, error) 
 			return out, e
 		}
 		if current != out.Text || pending != 0 {
-			return out, store.ErrNotFound
+			return out, ErrPending
 		}
 	}
 	if out.Kind != "claim" {
@@ -200,21 +200,38 @@ func (s *Service) get(ctx context.Context, tx *sql.Tx, owner, id string) (Entry,
 // annotations are fetched by relation, never by top-k. They must fit before a
 // base hit is admitted into the context. Corrections inherit target provenance.
 func annotations(ctx context.Context, q querier, owner string, h Hit, req SearchRequest, includeExcluded bool) ([]Hit, error) {
+	// Discover every related correction, including one scoped to an origin
+	// omitted by the context budget. Output still inherits only h's admitted
+	// origins; discovery must never enlarge the published provenance group.
+	relationOrigins := h.Origins
 	if h.Kind == "claim" {
 		all, e := origins(ctx, q, owner, h.MemoryID, req)
 		if e != nil {
 			return nil, e
 		}
-		h.Origins = all
+		relationOrigins = all
 	}
 	papers := map[string]bool{}
 	reports := map[string]bool{}
 	if h.PaperVersionID != "" {
 		papers[h.PaperVersionID] = true
 	}
-	for _, o := range h.Origins {
+	for _, o := range relationOrigins {
 		papers[o.PaperVersionID] = true
 		reports[o.ReportID] = true
+	}
+	// A pending note may have no projection yet, or an old revision whose
+	// passages have already been invalidated. Do not publish related claims
+	// without their mandatory current annotation or report a missing resource.
+	for paper := range papers {
+		var pending int
+		e := q.QueryRowContext(ctx, `SELECT count(*) FROM research_memory_jobs WHERE owner=? AND kind='note' AND source_id=? AND generation>processed`, owner, paper).Scan(&pending)
+		if e != nil {
+			return nil, e
+		}
+		if pending > 0 {
+			return nil, ErrPending
+		}
 	}
 	// Bounded by owner scope cap, enforced by search before this call.
 	rows, err := q.QueryContext(ctx, `SELECT id,kind,paper_id,target_id,excluded FROM research_memories WHERE owner=? AND kind IN ('user_note','user_correction') AND state IN ('active','disputed') AND created_at<=? ORDER BY kind,id LIMIT 20001`, owner, req.Before.UTC().Format(time.RFC3339Nano))
@@ -222,6 +239,7 @@ func annotations(ctx context.Context, q querier, owner string, h Hit, req Search
 		return nil, err
 	}
 	ids := []string{}
+	corrections := map[string][]string{}
 	scanned := 0
 	for rows.Next() {
 		scanned++
@@ -233,6 +251,9 @@ func annotations(ctx context.Context, q querier, owner string, h Hit, req Search
 		var ex bool
 		if err = rows.Scan(&id, &kind, &paper, &target, &ex); err != nil {
 			break
+		}
+		if kind == "user_correction" && (!ex || includeExcluded) {
+			corrections[target] = append(corrections[target], id)
 		}
 		if (!ex || includeExcluded) && ((kind == "user_note" && papers[paper]) || (kind == "user_correction" && target == h.MemoryID)) {
 			ids = append(ids, id)
@@ -307,27 +328,28 @@ func annotations(ctx context.Context, q querier, owner string, h Hit, req Search
 		}
 	}
 	out := []Hit{}
-	for _, id := range unique(ids) {
-		if id == h.MemoryID {
+	ids = unique(ids)
+	visited := map[string]bool{h.MemoryID: true}
+	for i := 0; i < len(ids); i++ {
+		id := ids[i]
+		if visited[id] {
 			continue
 		}
+		visited[id] = true
 		entry, e := loadEntry(ctx, q, owner, id)
 		if e != nil {
 			return nil, e
 		}
 		if entry.Kind == "user_note" {
-			var current string
-			var gen, done int
-			e = q.QueryRowContext(ctx, `SELECT u.note,j.generation,j.processed FROM user_papers u JOIN research_memory_jobs j ON j.owner=u.user_id AND j.source_id=u.paper_version_id AND j.kind='note' WHERE u.user_id=? AND u.paper_version_id=?`, owner, entry.PaperVersionID).Scan(&current, &gen, &done)
-			if errors.Is(e, sql.ErrNoRows) {
+			if strings.TrimSpace(entry.Text) == "" {
 				continue
 			}
-			if e != nil {
-				return nil, e
+			// Resolve the closure before Search admits or budgets this entire group.
+			// A scientific claim can bring in a note which itself has been corrected.
+			if entry.State == "disputed" && len(corrections[id]) == 0 {
+				return nil, ErrPending
 			}
-			if current != entry.Text || gen != done || strings.TrimSpace(current) == "" {
-				continue
-			}
+			ids = append(ids, corrections[id]...)
 		}
 		decorate(&entry.Hit, h.Origins)
 		out = append(out, entry.Hit)

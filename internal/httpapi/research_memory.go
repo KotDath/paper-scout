@@ -60,6 +60,8 @@ func memoryError(w http.ResponseWriter, err error) bool {
 	switch {
 	case errors.Is(err, store.ErrNotFound):
 		apiError(w, 404, "not_found", "Resource not found", false)
+	case errors.Is(err, researchmemory.ErrPending):
+		apiError(w, 503, "memory_pending", "Current research annotations are pending; retry", true)
 	case errors.Is(err, researchmemory.ErrConflict):
 		apiError(w, 409, "revision_conflict", "Reload the current revision", false)
 	case errors.Is(err, researchmemory.ErrInvalid):
