@@ -77,6 +77,7 @@ def wait_run(base, token, run, timeout=90):
 class Provider(BaseHTTPRequestHandler):
     calls=[]
     snapshots=[]
+    snapshot_wires=[]
     failure=None
     block=None
     block_ready=None
@@ -96,15 +97,24 @@ class Provider(BaseHTTPRequestHandler):
                 return
             # Actual Analyzer's nested request, with tools disabled.
             if not req.get('tools'):
-                answer=json.dumps({'methods':[{'text':SOURCE_B,'evidence_ids':['ev_new']}], 'results':[], 'limitations':[]})
+                methods=[{'text':SOURCE_B,'evidence_ids':['ev_new']}]
+                if any('EXPANDING_CONTENT' in (m.get('content') or '') for m in messages):
+                    # Deliberately synthetic provider data for JSON-budget coverage.
+                    methods=[{'text':'Memory '+'&'*1993,'evidence_ids':['ev_new']}]*2
+                answer=json.dumps({'methods':methods, 'results':[], 'limitations':[]})
                 payload=self.response(answer)
             else:
                 snaps=[m['content'].split(': ',1)[1] for m in messages if (m.get('content') or '').startswith('Research memory snapshots')]
                 assert len(snaps)==1,'automatic memory missing before provider'
+                # Measure the actual model-context string after the outer HTTP
+                # decode. Re-encoding parsed snapshots hides Go's JSON expansion.
+                type(self).snapshot_wires.append(snaps[0])
+                assert len(snaps[0])<=12000, ('memory JSON exceeds total cap',len(snaps[0]))
                 snapshots=json.loads(snaps[0]); type(self).snapshots.append(snapshots)
-                assert len(json.dumps(snapshots,ensure_ascii=False,separators=(',',':')))<=12000
+                if len(snapshots)==1:
+                    assert len(snaps[0])<=6000, ('first memory JSON exceeds cap',len(snaps[0]))
                 tools=[m for m in messages if m['role']=='tool']
-                label=next(m['content'] for m in messages if m['role']=='user' and (m.get('content') or '').startswith('T20_CASE:'))
+                label=next(m['content'] for m in messages if m['role']=='user' and (m.get('content') or '').startswith(('T20_CASE:','Memory ')))
                 if 'EMPTY' not in label:
                     assert 'PRIVATE_ACCOUNT_CONTEXT' not in snaps[0]
                 with sqlite3.connect(self.path_db) as db:
@@ -117,7 +127,14 @@ class Provider(BaseHTTPRequestHandler):
                     if self.block_ready: self.block_ready.set()
                     if self.block: self.block.wait(10)
                     payload=self.response('Cancelled fixture response')
-                elif 'SIMPLE' in label or 'EMPTY' in label or 'BUDGET' in label:
+                elif 'EXPANDING_CONTENT' in label:
+                    if not tools:
+                        payload=self.tool('analyze_paper',{'paper_version_id':'paper_new','question':'EXPANDING_CONTENT JSON-budget integration fixture.'},'expanding-analysis')
+                    else:
+                        assert len(snapshots)==2
+                        assert 'memory_query_truncated' in snapshots[1]['reasons']
+                        payload=self.response('Synthetic JSON-expansion integration; no scientific comparison asserted.')
+                elif 'SIMPLE' in label or 'EMPTY' in label or 'BUDGET' in label or label.startswith('Memory '):
                     payload=self.response('Memory unavailable or unrelated; no scientific comparison asserted.')
                 elif not tools:
                     assert len(snapshots)==1 and snapshots[0]['point']=='question'
@@ -202,7 +219,32 @@ def main():
                 assert db.execute('SELECT processed FROM research_memory_jobs WHERE source_id=?',(state['report_id'],)).fetchone()[0]==1
             assert json_call(base,'GET','/api/v1/reports/'+state['report_id'],other,code=404)['error']['code']=='not_found'
             print('PASS production first-request automatic hybrid recall after restart; missed capture repaired without replay; content recall exactly once after two real Analyzer calls; original passages A/B; validated recalled/referenced links; post-commit capture')
-            old_report=report;old_path='/api/v1/reports/'+state['report_id'];old_count=len(Provider.calls)
+            old_report=report;old_path='/api/v1/reports/'+state['report_id']
+            # The original review reproducer is exactly 4000 Unicode characters.
+            # In Go JSON, every ampersand expands to six characters (\u0026).
+            expanded_question='Memory '+'&'*3993
+            assert len(expanded_question)==4000
+            expansion_run=create_run(base,token,'json-question',expanded_question)
+            expansion_state=wait_run(base,token,expansion_run)
+            if Provider.failure: raise Provider.failure
+            assert expansion_state['status']=='completed',expansion_state
+            wire=Provider.snapshot_wires[-1];snap=Provider.snapshots[-1][0]
+            assert '\\u0026' in wire and len(wire)<=6000
+            assert 'memory_query_truncated' in snap['reasons']
+            assert snap['query']!=expanded_question and expanded_question.startswith(snap['query'])
+            first_size=len(wire)
+            with sqlite3.connect(env['SQLITE_PATH']) as db:
+                assert db.execute('SELECT request_message FROM runs WHERE id=?',(expansion_run,)).fetchone()[0]==expanded_question
+                assert json.loads(db.execute('SELECT snapshot_json FROM run_memory_snapshots WHERE run_id=?',(expansion_run,)).fetchone()[0])==snap
+            expansion_run=create_run(base,token,'json-content','T20_CASE: EXPANDING_CONTENT memory consolidation')
+            expansion_state=wait_run(base,token,expansion_run)
+            if Provider.failure: raise Provider.failure
+            assert expansion_state['status']=='completed',expansion_state
+            wire=Provider.snapshot_wires[-1];snaps=Provider.snapshots[-1]
+            assert len(snaps)==2 and len(wire)<=12000 and '\\u0026' in wire
+            assert 'memory_query_truncated' in snaps[1]['reasons']
+            print(f'PASS raw Go JSON expansion at provider HTTP boundary: question={first_size}/6000, combined content={len(wire)}/12000 characters; original request retained')
+            old_count=len(Provider.calls)
             # Corrections/edits change future prompts, never historical snapshots.
             note=next(h for h in memory['referenced'] if h['kind']=='user_note')
             claim=next(h for h in memory['referenced'] if h['kind']=='claim')

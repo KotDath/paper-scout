@@ -519,7 +519,12 @@ Chat Completions автоматически выполняется `Search` по
 Query ограничен 4000 Unicode-символами. В автоматически добавляемые данные
 включается не более **12000 Unicode-символов всего JSON snapshots**, включая
 query, provenance, coverage и annotations; первая точка использует до 6000,
-оставляя место для content recall. Server-only `SearchResult.Groups` (`json:"-"`) сохраняет полное annotation
+оставляя место для content recall. Размер измеряется по фактическому Go JSON,
+с учётом экранирования (`&` → `\u0026`), а не после decode/re-encode.
+При необходимости Query сокращается по границе Unicode **до Search** с
+`memory_query_truncated`; original request остаётся в run без изменения.
+После сокращения hits/diagnostics итоговая сериализация проверяется снова;
+непомещающийся контекст не сохраняется (`memory_context_limit`). Server-only `SearchResult.Groups` (`json:"-"`) сохраняет полное annotation
 closure каждого base, даже когда публичные hits дедуплицируют общую correction.
 Группы base+mandatory annotations принимаются
 целиком либо пропускаются с `memory_prompt_budget`; число разных report origins

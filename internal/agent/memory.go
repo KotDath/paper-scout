@@ -33,9 +33,18 @@ func (a *AgentRunner) recall(ctx context.Context, run store.Run, point, query st
 	if len(previous) >= 2 {
 		return store.ErrRunState
 	}
+	cap := memoryContextRunes
+	if point == "question" {
+		cap = memoryContextRunes / 2
+	}
 	snap := store.MemorySnapshot{Point: point, Query: truncateQuery(query), RetrievalMode: "unavailable", Reasons: []string{}, Hits: []store.MemoryHit{}}
 	if utf8.RuneCountInString(query) > 4000 {
 		snap.Reasons = append(snap.Reasons, "memory_query_truncated")
+	}
+	// Budget the exact JSON before retrieval, so the recorded query is also the
+	// query actually searched. Reserve room for bounded diagnostics added later.
+	if err := fitRecallQuery(previous, &snap, cap-256); err != nil {
+		return err
 	}
 	cutoff, err := time.Parse(time.RFC3339Nano, run.CreatedAt)
 	if err != nil {
@@ -101,11 +110,6 @@ func (a *AgentRunner) recall(ctx context.Context, run store.Run, point, query st
 			candidate := snap
 			candidate.Hits = append(append([]store.MemoryHit{}, snap.Hits...), group...)
 			raw, _ := json.Marshal(append(append([]store.MemorySnapshot{}, previous...), candidate))
-			cap := memoryContextRunes
-			// Reserve space for content-based discovery; annotations remain indivisible.
-			if point == "question" {
-				cap = memoryContextRunes / 2
-			}
 			if utf8.RuneCount(raw) > cap-256 {
 				snap.Reasons = appendUnique(snap.Reasons, "memory_prompt_budget")
 				continue
@@ -119,16 +123,59 @@ func (a *AgentRunner) recall(ctx context.Context, run store.Run, point, query st
 	if err != nil {
 		return err
 	}
-	cap := memoryContextRunes
-	if point == "question" {
-		cap = memoryContextRunes / 2
-	}
 	if utf8.RuneCount(raw) > cap {
 		snap.Hits = []store.MemoryHit{}
 		snap.Reasons = []string{"memory_prompt_budget", "memory_diagnostics_omitted"}
+		if snap.Query != query {
+			snap.Reasons = append(snap.Reasons, "memory_query_truncated")
+		}
+	}
+	// Recheck the final serialized representation after every reduction. Query
+	// and diagnostics can expand in JSON even when there are no remaining hits.
+	if err := fitRecallQuery(previous, &snap, cap); err != nil {
+		return err
 	}
 	slog.Info("research memory read", "run_id", run.ID, "point", point, "mode", snap.RetrievalMode, "hits", len(snap.Hits), "refresh_processed", found.Refresh.Processed, "refresh_pending", found.Refresh.Pending, "duration_ms", time.Since(started).Milliseconds())
 	return a.db.SaveMemorySnapshot(ctx, run.UserID, run.ID, snap)
+}
+
+// fitRecallQuery uses the same encoding as AgentSession's actual context string.
+// Rune-safe prefix selection accounts for JSON expansion (e.g. & -> \u0026),
+// not just the decoded query length. A context that cannot fit is never saved.
+func fitRecallQuery(previous []store.MemorySnapshot, snap *store.MemorySnapshot, cap int) error {
+	size := func() (int, error) {
+		raw, err := json.Marshal(append(append([]store.MemorySnapshot{}, previous...), *snap))
+		return utf8.RuneCount(raw), err
+	}
+	n, err := size()
+	if err != nil || n <= cap {
+		return err
+	}
+	snap.Reasons = appendUnique(snap.Reasons, "memory_query_truncated")
+	query := []rune(snap.Query)
+	low, high := 0, len(query)
+	for low < high {
+		mid := (low + high + 1) / 2
+		snap.Query = string(query[:mid])
+		n, err = size()
+		if err != nil {
+			return err
+		}
+		if n <= cap {
+			low = mid
+		} else {
+			high = mid - 1
+		}
+	}
+	snap.Query = string(query[:low])
+	n, err = size()
+	if err != nil {
+		return err
+	}
+	if n > cap {
+		return &ToolError{Code: "memory_context_limit"}
+	}
+	return nil
 }
 
 func appendUnique(values []string, v string) []string {
