@@ -4,9 +4,9 @@ package researchmemory
 
 import (
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"paper-scout/internal/embeddings"
+	"paper-scout/internal/store"
 	"time"
 )
 
@@ -37,46 +37,15 @@ type SearchRequest struct {
 	ExcludeRunID string    `json:"-"`
 	Before       time.Time `json:"-"`
 }
-type Origin struct {
-	ReportID         string          `json:"report_id"`
-	RunID            string          `json:"run_id"`
-	ConversationID   string          `json:"conversation_id"`
-	AnalysisID       string          `json:"analysis_id,omitempty"`
-	DocumentID       string          `json:"document_id,omitempty"`
-	PaperVersionID   string          `json:"paper_version_id,omitempty"`
-	CreatedAt        string          `json:"created_at"`
-	Status           string          `json:"status"`
-	AnalysisStatus   string          `json:"analysis_status,omitempty"`
-	ExtractionStatus string          `json:"extraction_status,omitempty"`
-	Coverage         json.RawMessage `json:"coverage"`
-	Limitations      []string        `json:"limitations"`
-	EvidenceIDs      []string        `json:"evidence_ids"`
-}
-type Hit struct {
-	MemoryID       string   `json:"memory_id"`
-	Kind           string   `json:"kind"`
-	Facet          string   `json:"facet,omitempty"`
-	Authority      string   `json:"authority"`
-	State          string   `json:"state"`
-	Revision       int      `json:"revision"`
-	ReportID       string   `json:"report_id,omitempty"`
-	ConversationID string   `json:"conversation_id,omitempty"`
-	PaperVersionID string   `json:"paper_version_id,omitempty"`
-	TargetID       string   `json:"target_id,omitempty"`
-	Title          string   `json:"title"`
-	Text           string   `json:"text"`
-	ContentHash    string   `json:"content_hash"`
-	EvidenceIDs    []string `json:"evidence_ids"`
-	Origins        []Origin `json:"origins"`
-	CharStart      int      `json:"char_start"`
-	CharEnd        int      `json:"char_end"`
-	LexicalRank    int      `json:"lexical_rank,omitempty"`
-	DenseRank      int      `json:"dense_rank,omitempty"`
-	RRFScore       float64  `json:"rrf_score,omitempty"`
-	BM25           float64  `json:"bm25,omitempty"`
-	Cosine         float64  `json:"cosine,omitempty"`
-}
+
+// Aliases preserve the T19 caller contract while Report uses the same wire types.
+type Origin = store.MemoryOrigin
+type Hit = store.MemoryHit
+
 type SearchResult struct {
+	// Groups retain each base's full annotation closure for further server-side
+	// prompt budgeting. Hits stay deduplicated on the existing HTTP contract.
+	Groups            [][]Hit       `json:"-"`
 	Query             string        `json:"query"`
 	RetrievalMode     string        `json:"retrieval_mode"`
 	Reasons           []string      `json:"reasons"`

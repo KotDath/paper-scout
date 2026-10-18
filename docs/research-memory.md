@@ -1,7 +1,8 @@
 # Память между исследованиями
 
 Статус: T19 реализует хранилище, capture/consolidation, hybrid search и HTTP;
-автоматическое подключение к агенту, Flutter и новая сквозная приёмка — T20–T22.
+реализация T20 подключает automatic recall к агенту и production entrypoint.
+Flutter и новая сквозная приёмка остаются в T21–T22.
 Пользователь попросил сначала изучить подходы долговременной памяти; выбор обоснован в
 [memory-approaches.md](memory-approaches.md). Полный пользовательский сценарий ещё не реализован.
 Прежняя сдача дня 35 остаётся историческим результатом.
@@ -498,3 +499,93 @@ finally-stop, ffprobe, полное декодирование, визуальн
 
 Это требование к новой полной записи, а не переписыванию прежнего видео.
 Собственные Qwen3-интеграции T19 не являются будущей live/UI/video-проверкой.
+
+## Реализованное подключение AgentRunner — T20
+
+Production `cmd/paper-scout` передаёт один `researchmemory.Service` в
+`researchapp.Attach(..., memory)`; он использует существующий EmbeddingClient.
+Legacy `Attach` / `agent.New` без памяти совместимы. Перед первым outer
+Chat Completions автоматически выполняется `Search` по текущему вопросу;
+`ExcludeRunID` — текущий run, `Before` — его persisted `created_at`.
+После первого успешного `analyze_paper`, вернувшего непустые observations,
+один дополнительный recall использует название и method/result/limitation
+тексты новой работы. Дополнительного DeepSeek-запроса для recall нет.
+Два разных анализа и повторные model requests не открывают третью точку.
+Новый memory tool не добавлен: обе точки выполняются независимо от модели.
+
+Один recall имеет deadline 30 секунд, унаследованный от run cancellation.
+Каждый Search сохраняет границы T19: до 16 notes / 2 report projections,
+один batch <=32 passages, один query embedding, top20 обеих веток / RRF60.
+Query ограничен 4000 Unicode-символами. В автоматически добавляемые данные
+включается не более **12000 Unicode-символов всего JSON snapshots**, включая
+query, provenance, coverage и annotations; первая точка использует до 6000,
+оставляя место для content recall. Размер измеряется по фактическому Go JSON,
+с учётом экранирования (`&` → `\u0026`), а не после decode/re-encode.
+При необходимости Query сокращается по границе Unicode **до Search** с
+`memory_query_truncated`; original request остаётся в run без изменения.
+После сокращения hits/diagnostics итоговая сериализация проверяется снова;
+непомещающийся контекст не сохраняется (`memory_context_limit`). Server-only `SearchResult.Groups` (`json:"-"`) сохраняет полное annotation
+closure каждого base, даже когда публичные hits дедуплицируют общую correction.
+Группы base+mandatory annotations принимаются
+целиком либо пропускаются с `memory_prompt_budget`; число разных report origins
+по обеим точкам <=5. Полностью повторившиеся группы повторно не вставляются.
+Профиль и обычная conversation history остаются отдельным контекстом;
+общие ContextBytes/token/request/time ограничения AgentRunner не снимаются.
+
+Единые типы находятся в `internal/store/research_memory.go`:
+
+- `MemoryOrigin`, `MemoryHit` — прежние поля T19 без изменения JSON;
+  `researchmemory.Origin` / `Hit` — Go aliases, не новые сущности.
+- `MemorySnapshot{Point, Query, RetrievalMode, Reasons, Hits}` — JSON
+  `point=question|content`, `query`, `retrieval_mode`, `reasons: []`, `hits: []`.
+  Hit содержит фактически выбранные text/hash/revision/provenance/ranks.
+- `ResearchMemory{RetrievalMode, Reasons, Recalled, Referenced}` — JSON
+  `retrieval_mode`, `reasons: []`, `recalled: []MemoryHit`,
+  `referenced: []MemoryHit`. Это nullable `Report.ResearchMemory` /
+  `report.research_memory`; старые отчёты и explicit disabled runs имеют null.
+
+Миграция `T20_run_memory.sql` добавляет owner-scoped через runs таблицу
+`run_memory_snapshots` (ordinal 0/1) и nullable `reports.research_memory_json`.
+Snapshot и public event `memory_recalled` с **тем же** payload фиксируются одной
+транзакцией до следующего запроса модели; cancelled/terminal run новый snapshot
+не принимает. AgentSession добавляет только снимки **текущего** run как user data
+после статических правил/профиля, не копирует снимки прежних runs. Snapshot —
+предварительно сохранённый точный контекст запроса; при сетевом обрыве/краше он
+не доказывает получение провайдером, чтение или смысловое использование. Durable
+`model_request_started/finished` и unknown usage сохраняют эту неопределённость.
+
+При memory read error модель получает `retrieval_mode=unavailable`, пустые hits
+и явный reason (`memory_pending`, `memory_scope_limit`, `memory_timeout` либо
+`memory_unavailable`); это не успешная пустая история. Ollama degradation остаётся
+`lexical_only`/`hybrid_partial` из T19. В report агрегируется худший режим двух
+точек (unavailable > lexical_only > hybrid_partial > hybrid), reasons объединяются.
+Негибридный режим также попадает в limitations. Для здоровой пустой памяти
+допустим hybrid с пустыми recalled/referenced; это не требование сравнивать.
+
+Report materialization разрешает `[memory:<id>]` только когда ID выдан этому run
+и запись принадлежит owner. Собственный, но не выданный ID, чужой ID и
+несуществующий ID заменяются `[unresolved_memory_reference]`; limitation
+`unresolved_memory_reference` явна. `referenced` содержит только валидные
+упомянутые origins, `recalled` — уникальные выданные passages/revisions.
+Ссылки не доказывают научную истинность: системное правило требует открыть
+оригинальные passages обеих работ и проверить смысл, отделить user preference,
+старый model claim, correction/disputed и новое evidence. Прежний механизм
+проверки `ev_...` сохранён. Memory metadata и report/terminal status фиксируются
+в одном `CompleteReport`; отмена не публикует report. Исходные отчёты immutable;
+актуальные annotations к историческому origin читаются через memory GET (T21).
+
+После terminal/report commit выполняется bounded Capture без DeepSeek. Ошибка
+не откатывает report: T19 job остаётся pending и следующий Search восстанавливает
+его без платного replay. Public `memory_captured` содержит
+`status=captured|pending`, processed/added/noop/reasons; сохранение диагностики
+имеет отдельный deadline. Логи `research memory read`, `research memory write`,
+`research memory embedding` отделены от durable DeepSeek usage; текст, векторы,
+credentials/provider reasoning в них не пишутся. Note edits актуализируются
+через existing durable jobs перед новым recall, без отдельного UI действия.
+
+`RESEARCH_MEMORY_ENABLED=true` по умолчанию. Явное `false` в production отключает
+автоматические recall/capture для контрольного прогона T22; durable source jobs
+остаются и могут быть обработаны после включения. Memory HTTP API остаётся
+доступным. Это переключатель эксперимента, а не автоматический fallback.
+
+Проверки и точные live-ограничения: [verification/T20.md](verification/T20.md).

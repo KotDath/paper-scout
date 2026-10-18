@@ -147,7 +147,7 @@ func (s *Service) Index(ctx context.Context, owner string, req SearchRequest) (I
 		return out, nil
 	}
 	out.Attempted = len(batch)
-	result, err := s.embed.Embed(ctx, embeddings.Document, inputs)
+	result, err := s.encode(ctx, owner, embeddings.Document, inputs)
 	if err != nil {
 		if ctx.Err() != nil {
 			return out, ctx.Err()
@@ -216,7 +216,7 @@ func (s *Service) Search(ctx context.Context, owner string, req SearchRequest) (
 	out.Reasons = append(out.Reasons, index.Reasons...)
 	var query []float32
 	if s.embed != nil {
-		r, e := s.embed.Embed(ctx, embeddings.Query, []string{req.Query})
+		r, e := s.encode(ctx, owner, embeddings.Query, []string{req.Query})
 		if e != nil {
 			if ctx.Err() != nil {
 				return out, ctx.Err()
@@ -417,6 +417,7 @@ func (s *Service) Search(ctx context.Context, owner string, req SearchRequest) (
 			continue
 		}
 		used += cost
+		out.Groups = append(out.Groups, append([]Hit{h}, ann...))
 		out.Hits = append(out.Hits, h)
 		emitted[h.MemoryID] = true
 		for _, a := range ann {

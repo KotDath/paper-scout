@@ -541,7 +541,7 @@ func seedResearch(ctx context.Context, db *store.Store, key string) error {
 		return err
 	}
 	sources := []store.ReportSource{{Paper: store.Paper{ID: paper, Title: "Synthetic memory paper " + key}, AnalysisStatus: "complete", Coverage: []store.Coverage{}}}
-	return exec(`INSERT INTO reports VALUES(?,'owner_a',?,?,'[]',?,'[]','[]',?)`, "report_"+key, run, "Synthetic report: "+source, mustJSON(sources), stamp)
+	return exec(`INSERT INTO reports(id,user_id,run_id,markdown,citations_json,sources_json,coverage_json,limitations_json,created_at) VALUES(?,'owner_a',?,?,'[]',?,'[]','[]',?)`, "report_"+key, run, "Synthetic report: "+source, mustJSON(sources), stamp)
 }
 func seedDuplicate(ctx context.Context, db *store.Store) error {
 	for _, q := range []string{
@@ -549,7 +549,7 @@ func seedDuplicate(ctx context.Context, db *store.Store) error {
 		`INSERT INTO runs(id,user_id,conversation_id,client_request_id,request_message,status,created_at,budget_json) SELECT 'run_duplicate',user_id,'conv_duplicate','duplicate',request_message,status,created_at,budget_json FROM runs WHERE id='run_a'`,
 		`INSERT INTO run_sources SELECT 'run_duplicate',paper_version_id,selection_reason,analysis_status FROM run_sources WHERE run_id='run_a'`,
 		`INSERT INTO paper_analyses SELECT 'analysis_duplicate','run_duplicate',document_id,question,status,result_json,error_code,created_at,finished_at FROM paper_analyses WHERE id='analysis_a'`,
-		`INSERT INTO reports SELECT 'report_duplicate',user_id,'run_duplicate',markdown,citations_json,sources_json,coverage_json,limitations_json,created_at FROM reports WHERE id='report_a'`,
+		`INSERT INTO reports(id,user_id,run_id,markdown,citations_json,sources_json,coverage_json,limitations_json,created_at) SELECT 'report_duplicate',user_id,'run_duplicate',markdown,citations_json,sources_json,coverage_json,limitations_json,created_at FROM reports WHERE id='report_a'`,
 	} {
 		if _, err := db.DB.ExecContext(ctx, q); err != nil {
 			return err
@@ -591,7 +591,7 @@ func fallback(ctx context.Context, db *store.Store, memory *researchmemory.Servi
 		}
 	}
 	source := []store.ReportSource{{Paper: store.Paper{ID: "paper_b"}, AnalysisStatus: "partial"}}
-	if _, err := db.DB.ExecContext(ctx, `INSERT INTO reports VALUES('report_fallback','owner_b','run_fallback',?,'[]',?,'[]','["partial synthetic source"]','2026-01-03T00:00:00Z')`, strings.Repeat("episodic consolidation long synthetic episode. ", 2000), mustJSON(source)); err != nil {
+	if _, err := db.DB.ExecContext(ctx, `INSERT INTO reports(id,user_id,run_id,markdown,citations_json,sources_json,coverage_json,limitations_json,created_at) VALUES('report_fallback','owner_b','run_fallback',?,'[]',?,'[]','["partial synthetic source"]','2026-01-03T00:00:00Z')`, strings.Repeat("episodic consolidation long synthetic episode. ", 2000), mustJSON(source)); err != nil {
 		return err
 	}
 	captured, err := memory.Capture(ctx, "owner_b", "report_fallback")

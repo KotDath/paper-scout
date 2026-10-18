@@ -22,6 +22,7 @@ import (
 	"paper-scout/internal/httpapi"
 	"paper-scout/internal/research"
 	"paper-scout/internal/researchapp"
+	"paper-scout/internal/researchmemory"
 	"paper-scout/internal/researchtools"
 	"paper-scout/internal/retrieval"
 	"paper-scout/internal/store"
@@ -115,7 +116,11 @@ func run() error {
 		if err != nil {
 			return err
 		}
-		researchapp.Attach(db, runs, runner, retrievalService)
+		if cfg.ResearchMemoryEnabled {
+			researchapp.Attach(db, runs, runner, retrievalService, researchmemory.New(db.DB, embeddingClient))
+		} else {
+			researchapp.Attach(db, runs, runner, retrievalService)
+		}
 	}
 	listener, err := net.Listen("tcp", cfg.HTTPAddr)
 	if err != nil {

@@ -12,9 +12,10 @@ import (
 )
 
 type Config struct {
-	HTTPAddr   string
-	SQLitePath string
-	CacheDir   string
+	ResearchMemoryEnabled bool
+	HTTPAddr              string
+	SQLitePath            string
+	CacheDir              string
 }
 
 // Load reads only an explicitly selected dotenv file. Existing environment
@@ -26,10 +27,15 @@ func Load(envFile string) (Config, error) {
 			return Config{}, errors.New("cannot load env file")
 		}
 	}
+	memoryEnabled, err := strconv.ParseBool(value("RESEARCH_MEMORY_ENABLED", "true"))
+	if err != nil {
+		return Config{}, errors.New("RESEARCH_MEMORY_ENABLED must be boolean")
+	}
 	c := Config{
-		HTTPAddr:   value("HTTP_ADDR", "127.0.0.1:8080"),
-		SQLitePath: value("SQLITE_PATH", "data/paper-scout.sqlite"),
-		CacheDir:   value("CACHE_DIR", "data/cache"),
+		ResearchMemoryEnabled: memoryEnabled,
+		HTTPAddr:              value("HTTP_ADDR", "127.0.0.1:8080"),
+		SQLitePath:            value("SQLITE_PATH", "data/paper-scout.sqlite"),
+		CacheDir:              value("CACHE_DIR", "data/cache"),
 	}
 	host, port, err := net.SplitHostPort(c.HTTPAddr)
 	if err != nil || net.ParseIP(host) == nil || !net.ParseIP(host).IsLoopback() {
