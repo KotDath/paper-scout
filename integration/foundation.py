@@ -95,9 +95,10 @@ def main():
             with sqlite3.connect(env["SQLITE_PATH"]) as db:
                 assert db.execute("PRAGMA journal_mode").fetchone() == ("wal",)
                 ledger = db.execute("SELECT * FROM schema_migrations").fetchall()
-                assert len(ledger) == 1
-                assert ledger[0][0] == "migrations/T01_foundation.sql"
-                assert len(ledger[0][1]) == 64
+                expected = ["migrations/" + path.name for path in
+                            sorted((ROOT / "internal/store/migrations").glob("*.sql"))]
+                assert [row[0] for row in ledger] == expected
+                assert all(len(row[1]) == 64 for row in ledger)
                 # A real unrelated row must survive restart and migration replay.
                 db.execute("CREATE TABLE integration_persistence(value TEXT NOT NULL)")
                 db.execute("INSERT INTO integration_persistence VALUES ('survives restart')")

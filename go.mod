@@ -4,6 +4,7 @@ go 1.26.0
 
 require (
 	github.com/joho/godotenv v1.5.1
+	golang.org/x/net v0.52.0
 	modernc.org/sqlite v1.60.1
 )
 
