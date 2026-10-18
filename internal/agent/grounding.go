@@ -443,8 +443,12 @@ func (g *grounding) validate(raw string) (string, []string, []string) {
 	used := map[string]bool{}
 	for _, c := range d.Comparisons {
 		m, ok := g.mem(c.Memory)
-		if !ok || m.Hit.Kind != "claim" {
+		if !ok {
 			issues = append(issues, "unissued_scientific_memory:"+safeRef(c.Memory))
+			continue
+		}
+		if m.Hit.Kind != "claim" {
+			issues = append(issues, "user_annotation_is_not_scientific_claim:"+m.Handle+"; preserve/select this valid annotation in notes, remove it only from comparisons; notes convey user criteria, not scientific proof")
 			continue
 		}
 		var conclusionOK bool
