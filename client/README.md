@@ -79,7 +79,9 @@ with exact evidence IDs and coordinates. Unresolved citations stay limitations.
 
 Use the same question field for follow-up. A transport failure retains the original
 message/request ID for a safe retry. One active run blocks additional submissions;
-failed/cancelled/interrupted states do not fabricate a report. The source's analysis,
+failed/cancelled/interrupted states do not fabricate a report. During a follow-up,
+you can select and open a previous report while polling continues. The separate
+active-run panel keeps cancellation available and additional submissions blocked. The source's analysis,
 extraction and index statuses remain separate. The **Библиотека** tab lists imported
 papers, exposes explicit saved/read marks and personal notes, and searches passages
 with actual BM25/dense/RRF ranks and degradation reasons. Note/mark edits require

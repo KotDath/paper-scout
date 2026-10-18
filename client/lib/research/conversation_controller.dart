@@ -15,6 +15,7 @@ class ConversationController extends ChangeNotifier
   String title = 'Исследование';
   List<Json> messages = [], runs = [], events = [];
   Json? run;
+  Json? executingRun;
   bool loading = false, sending = false, cancelling = false;
   String? error;
   String? pendingMessage, pendingId;
@@ -22,7 +23,7 @@ class ConversationController extends ChangeNotifier
   bool _disposed = false, _foreground = true;
   int _eventSeq = 0;
   String? _eventRun;
-  bool get hasActiveRun => runs.any(activeRun) || activeRun(run);
+  bool get hasActiveRun => activeRun(executingRun);
 
   void _emit() {
     if (!_disposed) notifyListeners();
@@ -57,10 +58,11 @@ class ConversationController extends ChangeNotifier
       title = (page['conversation'] as Json)['title'] as String;
       messages = all;
       runs = rows(page['runs']);
+      // Viewing a historical run must not lose the independent execution state.
+      executingRun = runs.where(activeRun).firstOrNull;
       final selected = selectRun ?? run?['id'] as String?;
       final chosen = runs.where((r) => r['id'] == selected).firstOrNull;
-      final current =
-          runs.where(activeRun).firstOrNull ?? chosen ?? runs.firstOrNull;
+      final current = chosen ?? executingRun ?? runs.firstOrNull;
       if (current != null) {
         final state = await api.run(current['id'] as String);
         if (_disposed) return;
@@ -115,6 +117,7 @@ class ConversationController extends ChangeNotifier
       pendingId = pendingMessage = null;
       // Block a second submission even while a pre-existing refresh finishes.
       run = {'id': newRun, 'status': result['status']};
+      executingRun = activeRun(run) ? run : null;
       accepted = true;
     } catch (e) {
       if (!_disposed) error = failure(e);
@@ -146,13 +149,16 @@ class ConversationController extends ChangeNotifier
   }
 
   Future<void> cancel() async {
-    if (_disposed || cancelling || !activeRun(run)) return;
+    if (_disposed || cancelling || !hasActiveRun) return;
     cancelling = true;
     error = null;
     _emit();
     try {
-      final updated = await api.cancel(run!['id'] as String);
-      if (!_disposed) run = updated;
+      final updated = await api.cancel(executingRun!['id'] as String);
+      if (!_disposed) {
+        executingRun = activeRun(updated) ? updated : null;
+        if (run?['id'] == updated['id']) run = updated;
+      }
     } catch (e) {
       if (!_disposed) error = failure(e);
     } finally {

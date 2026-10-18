@@ -342,6 +342,7 @@ class _ConversationPaneState extends State<ConversationPane> {
     builder: (context, _) {
       final c = widget.controller;
       final run = c.run;
+      final executing = c.executingRun;
       return ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -368,24 +369,37 @@ class _ConversationPaneState extends State<ConversationPane> {
                 ],
               ),
             ),
-          if (run != null) ...[
-            heading(context, statusText(run['status'])),
-            if (activeRun(run)) ...[
-              const LinearProgressIndicator(),
+          if (executing != null && activeRun(executing)) ...[
+            heading(context, statusText(executing['status'])),
+            const LinearProgressIndicator(),
+            const Text(
+              'Этапы поступают с сервера. Процент готовности модели неизвестен.',
+            ),
+            if (executing['id'] != run?['id']) ...[
               const Text(
-                'Этапы поступают с сервера. Процент готовности модели неизвестен.',
+                'В диалоге выполняется другой запуск. Вы просматриваете сохранённый результат.',
               ),
-              OutlinedButton(
-                onPressed: c.cancelling || run['cancel_requested'] == true
+              TextButton(
+                onPressed: c.loading
                     ? null
-                    : c.cancel,
-                child: Text(
-                  run['cancel_requested'] == true
-                      ? 'Отмена запрошена'
-                      : 'Отменить исследование',
-                ),
+                    : () => c.refresh(selectRun: executing['id'] as String),
+                child: const Text('Показать активный запуск'),
               ),
             ],
+            OutlinedButton(
+              onPressed: c.cancelling || executing['cancel_requested'] == true
+                  ? null
+                  : c.cancel,
+              child: Text(
+                executing['cancel_requested'] == true
+                    ? 'Отмена запрошена'
+                    : 'Отменить исследование',
+              ),
+            ),
+          ],
+          if (run != null) ...[
+            if (run['id'] != executing?['id'])
+              heading(context, statusText(run['status'])),
             if (run['error_code'] != null) Text(runFailure(run['error_code'])),
             if (!activeRun(run) && run['report_id'] == null)
               const Text(
