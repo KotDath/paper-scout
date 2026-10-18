@@ -15,6 +15,7 @@ import (
 	"paper-scout/internal/auth"
 	"paper-scout/internal/config"
 	"paper-scout/internal/httpapi"
+	"paper-scout/internal/research"
 	"paper-scout/internal/store"
 )
 
@@ -55,13 +56,21 @@ func run() error {
 	if err := os.MkdirAll(cfg.CacheDir, 0700); err != nil {
 		return err
 	}
+	recovery, finishRecovery := context.WithTimeout(ctx, 15*time.Second)
+	err = db.RecoverRuns(recovery)
+	finishRecovery()
+	if err != nil {
+		return err
+	}
+	runs := research.New(ctx, db)
+	defer runs.Close()
 	listener, err := net.Listen("tcp", cfg.HTTPAddr)
 	if err != nil {
 		return err
 	}
 	defer listener.Close()
 	server := &http.Server{
-		Handler: httpapi.New(db), ReadHeaderTimeout: 5 * time.Second,
+		Handler: httpapi.NewWithRuns(db, runs), ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout: 15 * time.Second, WriteTimeout: 15 * time.Second,
 		IdleTimeout: 60 * time.Second, MaxHeaderBytes: 1 << 20,
 	}
