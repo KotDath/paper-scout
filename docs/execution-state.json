@@ -290,6 +290,32 @@
         "Changed Go files pass gofmt; whole-merge git diff --check passed; unit/widget tests not added or run. Runtime/build files remain ignored. Shared dotenv not read; no push or deployment.",
         "Flutter unchanged; analyze/device UI not repeated. Historical live arXiv/DeepSeek complete 28232/28232 and hybrid evidence plus limitations retained in docs/verification/T11.md; paid calls not repeated. Report API and thematic Flutter acceptance remain successor-node scope."
       ]
+    },
+    "T12": {
+      "status": "done",
+      "worktree": "/home/kotdath/omp/personal/ai/paper-scout-worktrees/T12",
+      "branch": "dag/t12",
+      "threads": {
+        "executor": "thr_gbc59rfnhu",
+        "reviewer": "thr_x88v2h8yer",
+        "simplifier": "thr_fnncfa48p4"
+      },
+      "base_sha": "785354d224161042c8b73f889f93e0545f202efb",
+      "approved_head_sha": "1aabf7b65230a96c5c93d3e5931cfefdefb50467",
+      "merge_sha": "baadc5ababdb4365a71dcebb005e0c3fc8b91b75",
+      "checks": [
+        "Pre-merge: main clean at expected 785354d224161042c8b73f889f93e0545f202efb; base ancestor; dag/t12 and clean task worktree at approved 1aabf7b65230a96c5c93d3e5931cfefdefb50467. Both review/fix cycles, simplification and final reviewer approval confirmed; verify.patch matches the approved diff after terminal-newline normalization.",
+        "git merge --no-ff dag/t12: passed without conflicts; merge baadc5ababdb4365a71dcebb005e0c3fc8b91b75. Independent worktrees preserved; integrated product tree matches the approved node head.",
+        "go build -mod=readonly -o .bb/runtime/t12-integration/bin/ ./..., go vet -mod=readonly ./... and go mod verify: passed using existing root-local .bb/runtime/t01 caches with GOPROXY=off. No dependency changes.",
+        "integration/researchapi.py main() with RUNTIME redirected to root .bb/runtime/t01: passed authenticated HTTP, production modules/SQLite, HTML extraction, Analyzer and installed Qwen3/Ollama. arXiv/article/DeepSeek HTTP boundaries use labeled fixtures; no paid live calls.",
+        "Research API integration: asynchronous POST admission and idempotency, polling/events, report_saved plus terminal commit, complete reading 17762/17762, addressable citations, owner isolation, strict inputs and saved/read/note persistence passed. Same-conversation follow-up uses actual BM25 plus real Qwen3 dense retrieval and RRF with persisted cited sources/coverage.",
+        "Worker regressions: two-run pool and active-conversation limits, cancellation without fabricated reports, atomic report/event/report_id rollback on failed insert, and polling of the current persisted partial reading prefix passed.",
+        "HTTP listener/SQLite close and reopen preserves reports, sources, evidence, history, notes and sessions; queued runs become interrupted without replay; integrity_check=ok. Separate production OS-process restart preserves the report and idempotency without provider replay; missing credentials produce failed/provider_unavailable with report_id=null.",
+        "Rebuilt integration/researchtools with -race and ran --api in a disposable root-worktree directory: full API fixture integration passed, including cancellation/pool/rollback and real hybrid retrieval, with no race reports.",
+        "GOPROXY=off python3 integration/foundation.py: passed production HTTP/SQLite, full migration ledger and drift rejection, FTS5/BM25, concurrent readiness, WAL/private DB, restart/persistence, extraction-tool readiness and sanitized configuration checks.",
+        "Changed Go files pass gofmt; whole-merge git diff --check passed; no tracked unit/widget tests added or run. Ephemeral ports and temporary databases used; sanitized fixture/race artifacts remain ignored in .bb/runtime/t12-integration.",
+        "Flutter unchanged; analyze/device UI not repeated. Approved historical live arXiv/DeepSeek evidence and its limits remain in docs/verification/T12.md; paid calls not repeated. Shared secret dotenv not read; no push or deployment. Full day-35 Flutter acceptance remains successor-node scope."
+      ]
     }
   }
 }
