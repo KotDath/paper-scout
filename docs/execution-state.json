@@ -118,6 +118,32 @@
         "gofmt and whole-merge git diff --check: passed; no tracked unit/widget tests added or run.",
         "Flutter unchanged; no device interaction or analyze needed. Shared dotenv not read; no paid provider calls or model downloads. Retrieval/indexing and ownership integration remain T08 scope."
       ]
+    },
+    "T05": {
+      "status": "done",
+      "worktree": "/home/kotdath/omp/personal/ai/paper-scout-worktrees/T05",
+      "branch": "dag/t05",
+      "threads": {
+        "executor": "thr_vpadz672wy",
+        "reviewer": "thr_zmbpw3yu9e",
+        "simplifier": "thr_6zdjj3i44i"
+      },
+      "base_sha": "33c6fae4154829403e419a0ba25965eb5b210116",
+      "approved_head_sha": "621e92490af1317ce7209a6e3f5ca821fd1afecc",
+      "merge_sha": "7d49d8e1eed4ae473aad7e2fd769df397098df15",
+      "checks": [
+        "Pre-merge: main clean at expected 0d979a184033bb305b31cc9b09a03c79c9ba3cea; base ancestor; dag/t05 and clean task worktree at approved 621e92490af1317ce7209a6e3f5ca821fd1afecc; two review/fix cycles, simplification and final reviewer approval confirmed; final review patch matches approved diff.",
+        "git merge --no-ff dag/t05: merge 7d49d8e1eed4ae473aad7e2fd769df397098df15. Preserved both crypto/net dependencies and complete migration checks; independent worktrees preserved.",
+        "Integration correction 44981a8fa9b8fcdcd8bf234eb7f555274ae770f0: reproduced approved documents harness failure (paper_versions already exists) using a temporary source overlay; removed catalog schema stub and seeded extraction fixtures in actual T04 schema. Production schema and extraction code unchanged.",
+        "T04/T05 composition in integration/documents/catalog.go: PASS; actual arxiv Search/Get and documents Import/Get in one production-migrated SQLite DB, Atom/HTML HTTP fixtures, consistent metadata/source IDs, two exact versions sharing bytes with distinct document/evidence IDs, foreign keys, full text/coordinates/warnings/evidence and both caches preserved across reopen with no further HTTP.",
+        "go mod tidy: PASS online and repeated offline, selecting x/net v0.60.0 required by existing x/crypto v0.58.0. Initial offline dependency absence and short network download timeouts resolved with longer download; go mod verify passed.",
+        "go build -mod=readonly ./... and go vet -mod=readonly ./...: PASS using root-local caches and GOPROXY=off.",
+        "integration/documents.py main(): PASS with runtime redirected to existing root t01 cache; real Poppler and SQLite, HTML sections, PDF/blank pages, Unicode chunks, fallback, limits, cancellation, deduplication and historical extractor/chunking IDs across restart, plus composed T04/T05 scenario.",
+        "Rebuilt integration/arxiv: PASS; normalization, exact/latest metadata, source/cache deduplication, concurrent misses, expiry, persistence, bounded retries/Retry-After, invalid/oversized Atom, redirects and cancellation; 27 fixture requests all at least 3 seconds apart.",
+        "integration/foundation.py, integration/accounts.py and integration/deepseek.py main(): PASS with root t01 runtime caches; real HTTP/SQLite, migration ledger/drift, FTS5/BM25, restart, account isolation/auth and provider contract regression. Accounts launcher import-path issue corrected before successful rerun; ephemeral ports and temporary databases used.",
+        "gofmt and whole-integration git diff --check: PASS; no unit/widget test files added or run. Detailed integration result and limitations: docs/verification/T05.md.",
+        "No new paid or live arXiv/HTML/PDF calls; earlier live evidence retained as historical evidence. Composition fixtures do not assert live source availability or full model reading. Flutter unchanged; no device work. Shared dotenv not read; no push/deployment."
+      ]
     }
   }
 }
