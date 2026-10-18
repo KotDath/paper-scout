@@ -66,9 +66,17 @@ func (s *Service) load(ctx context.Context, column, value string) (Document, err
 	if column != "id" && column != "paper_version_id" {
 		return Document{}, errors.New("invalid document lookup")
 	}
+	where := column + "=?"
+	args := []any{value}
+	// Cache selection uses current algorithms; immutable IDs must also resolve
+	// historical versions referenced by existing analysis and reports.
+	if column == "paper_version_id" {
+		where += " AND extractor_version=? AND chunking_version=?"
+		args = append(args, ExtractorVersion, ChunkingVersion)
+	}
 	var d Document
 	var segments, warnings string
-	err := s.db.QueryRowContext(ctx, `SELECT id,paper_version_id,format,content_hash,extractor_version,chunking_version,extraction_status,source_url,local_path,text,segments_json,warnings_json FROM documents WHERE `+column+`=? AND extractor_version=? AND chunking_version=? ORDER BY (extraction_status='full_text') DESC,created_at DESC LIMIT 1`, value, ExtractorVersion, ChunkingVersion).Scan(&d.ID, &d.PaperVersionID, &d.Format, &d.ContentHash, &d.ExtractorVersion, &d.ChunkingVersion, &d.ExtractionStatus, &d.SourceURL, &d.LocalPath, &d.Text, &segments, &warnings)
+	err := s.db.QueryRowContext(ctx, `SELECT id,paper_version_id,format,content_hash,extractor_version,chunking_version,extraction_status,source_url,local_path,text,segments_json,warnings_json FROM documents WHERE `+where+` ORDER BY (extraction_status='full_text') DESC,created_at DESC LIMIT 1`, args...).Scan(&d.ID, &d.PaperVersionID, &d.Format, &d.ContentHash, &d.ExtractorVersion, &d.ChunkingVersion, &d.ExtractionStatus, &d.SourceURL, &d.LocalPath, &d.Text, &segments, &warnings)
 	if err != nil {
 		return Document{}, err
 	}

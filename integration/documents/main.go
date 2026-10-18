@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -204,6 +205,47 @@ func run(runtime string, live bool) error {
 		return errors.New("duplicate document persisted")
 	}
 	fmt.Println("PASS: HTTP HTML-to-PDF fallback, real pdfinfo/pdftotext, three pages including empty page warning, source hash/cache, repeat import without HTTP or duplicate rows")
+	historicalDocuments := []documents.Document{}
+	for _, versions := range []struct{ name, extractor, chunking string }{
+		{"extractor", "historical-extractor", documents.ChunkingVersion},
+		{"chunking", documents.ExtractorVersion, "historical-chunking"},
+		{"both", "historical-extractor", "historical-chunking"},
+	} {
+		// Seed historical storage from the actual HTTP-ingested article. A later
+		// timestamp ensures import cannot accidentally select an obsolete version.
+		prefix := "historical-" + versions.name + "-"
+		historical := h
+		historical.ID = prefix + h.ID
+		historical.ExtractorVersion = versions.extractor
+		historical.ChunkingVersion = versions.chunking
+		historical.Chunks = append([]documents.Chunk(nil), h.Chunks...)
+		for i := range historical.Chunks {
+			historical.Chunks[i].ID = prefix + h.Chunks[i].ID
+			historical.Chunks[i].DocumentID = historical.ID
+		}
+		_, err = db.DB.ExecContext(ctx, `INSERT INTO documents
+ (id,paper_version_id,format,content_hash,extractor_version,chunking_version,extraction_status,source_url,local_path,text,segments_json,warnings_json,created_at)
+ SELECT ?,paper_version_id,format,content_hash,?,?,extraction_status,source_url,local_path,text,segments_json,warnings_json,'2999-01-01T00:00:00Z' FROM documents WHERE id=?`, historical.ID, versions.extractor, versions.chunking, h.ID)
+		if err != nil {
+			return err
+		}
+		_, err = db.DB.ExecContext(ctx, `INSERT INTO chunks
+ (id,document_id,ordinal,text,char_start,char_end,page_start,page_end,section)
+ SELECT ?||id,?,ordinal,text,char_start,char_end,page_start,page_end,section FROM chunks WHERE document_id=?`, prefix, historical.ID, h.ID)
+		if err != nil {
+			return err
+		}
+		got, err := s.Get(ctx, historical.ID)
+		if err != nil || !reflect.DeepEqual(got, historical) {
+			return fmt.Errorf("historical %s version lost document data: %v", versions.name, err)
+		}
+		before := requests.Load()
+		current, err := ingest(1, "")
+		if err != nil || !current.Cached || current.ID != h.ID || current.ExtractorVersion != documents.ExtractorVersion || current.ChunkingVersion != documents.ChunkingVersion || requests.Load() != before {
+			return errors.New("import cache selected a historical algorithm version")
+		}
+		historicalDocuments = append(historicalDocuments, historical)
+	}
 	for _, n := range []int{3, 4, 5, 6} {
 		d, err := ingest(n, "Available abstract only. Память агентов.")
 		if err != nil {
@@ -280,6 +322,16 @@ func run(runtime string, live bool) error {
 	if err = restart(dbPath, &db, &s, runtime, p); err != nil {
 		return err
 	}
+	for _, historical := range historicalDocuments {
+		got, err := s.Get(ctx, historical.ID)
+		if err != nil || !reflect.DeepEqual(got, historical) {
+			return fmt.Errorf("restart changed historical document: %v", err)
+		}
+		if err = validate(got); err != nil {
+			return err
+		}
+	}
+	fmt.Println("PASS: historical extractor/chunking versions remain readable by ID with unchanged text, coordinates, warnings and evidence after SQLite restart; import cache selects only current algorithms")
 	fmt.Println("PASS: download byte cap, redirect allowlist before transport, exact versioned ID validation, real Poppler stdout cap and pre-execution command deadline, in-flight HTTP deadline without persistence, SQLite restart with text/coordinates/evidence preserved")
 	return nil
 }
