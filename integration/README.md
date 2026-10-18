@@ -85,3 +85,11 @@ credentials или зависимости дают ошибку. Артефак�
 `live-result.json`, `live-summary.json`, без reasoning/credentials.
 Управление Flutter через `claude-in-mobile` и видео входят в T16/T17,
 а не в этот API-набор. Фактические результаты T15: [verification](../docs/verification/T15.md).
+
+T19 research-memory: `go run ./integration/researchmemory --runtime "$PWD/artifacts/t19/new-check"`
+uses a fresh disposable SQLite database, ephemeral HTTP ports, real account auth
+and the installed Qwen3 Ollama model. The persisted report/analysis/chunk corpus
+is synthetic. A forwarding loopback proxy injects only outage/race timing;
+healthy inference stays real. No dotenv, DeepSeek, unit/widget tests or device
+interaction. Contracts and exact results: `docs/research-memory.md`,
+`docs/verification/T19.md`. Use a new runtime directory for each invocation.

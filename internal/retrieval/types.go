@@ -75,3 +75,6 @@ type IndexStatus struct {
 	LastError     string `json:"last_error,omitempty"`
 	CacheHits     int    `json:"cache_hits"`
 }
+
+// EmbeddingClient shares the pinned local encoder with research memory.
+func (s *Service) EmbeddingClient() *embeddings.EmbeddingClient { return s.embed }
