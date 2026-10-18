@@ -126,7 +126,11 @@ def verify_process(binary, env, directory):
         report_path = '/reports/' + completed['report_id']
         report = api('GET', report_path, ta)
         assert report['limitations'] == ['no_addressable_citations']
-        assert [e['event_type'] for e in events(rid)][-2:] == ['report_saved', 'run_finished']
+        completed_events = [e['event_type'] for e in events(rid)]
+        saved_at = completed_events.index('report_saved')
+        assert completed_events[saved_at:saved_at + 2] == ['report_saved', 'run_finished']
+        # T20 capture diagnostics can follow the atomic report/terminal commit.
+        assert completed_events[saved_at + 2:] in ([], ['memory_captured'])
         for path in ['/conversations/' + conversation, '/runs/' + rid,
                      '/runs/' + rid + '/events', report_path]:
             api('GET', path, tb, expected=404)
