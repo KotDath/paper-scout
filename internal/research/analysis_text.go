@@ -1,6 +1,7 @@
 package research
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
@@ -8,6 +9,7 @@ import (
 	"io"
 	"sort"
 	"strings"
+	"unicode/utf8"
 
 	"paper-scout/internal/documents"
 )
@@ -21,7 +23,7 @@ type analysisPacket struct {
 func hashInput(b []byte) string { return fmt.Sprintf("%x", sha256.Sum256(b)) }
 
 func newAnalysis(id, runID string, d documents.Document) Analysis {
-	return Analysis{ID: id, RunID: runID, DocumentID: d.ID, PaperVersionID: d.PaperVersionID, Status: "none", ExtractionStatus: d.ExtractionStatus, Warnings: d.Warnings, TotalRunes: len([]rune(d.Text)), SuccessfulRanges: []Range{}, Observations: []Observations{}, Evidence: []Evidence{}}
+	return Analysis{ID: id, RunID: runID, DocumentID: d.ID, PaperVersionID: d.PaperVersionID, Status: "none", ExtractionStatus: d.ExtractionStatus, Warnings: d.Warnings, TotalRunes: utf8.RuneCountInString(d.Text), SuccessfulRanges: []Range{}, Observations: []Observations{}, Evidence: []Evidence{}}
 }
 
 func evidence(d documents.Document, c documents.Chunk, start, end int) Evidence {
@@ -29,54 +31,77 @@ func evidence(d documents.Document, c documents.Chunk, start, end int) Evidence 
 	if d.Format == "pdf" && c.PageStart > 0 {
 		url = fmt.Sprintf("%s#page=%d", url, c.PageStart)
 	}
-	return Evidence{ID: c.ID, DocumentID: d.ID, Text: string([]rune(d.Text)[start:end]), Start: start, End: end, PageStart: c.PageStart, PageEnd: c.PageEnd, Section: c.Section, SourceURL: url}
+	// Full evidence reuses the canonical chunk string. Only boundary clips
+	// decode runes, bounded by the chunk size rather than document size.
+	text := c.Text
+	if start != c.CharStart || end != c.CharEnd {
+		text = string([]rune(c.Text)[start-c.CharStart : end-c.CharStart])
+	}
+	return Evidence{ID: c.ID, DocumentID: d.ID, Text: text, Start: start, End: end, PageStart: c.PageStart, PageEnd: c.PageEnd, Section: c.Section, SourceURL: url}
 }
 
-// Parts partition the exact document text. Labels are existing evidence chunks;
-// overlapping retrieval chunks are clipped, never omitted or counted twice.
-func packets(d documents.Document, limit int) ([]analysisPacket, error) {
-	total := len([]rune(d.Text))
-	out := []analysisPacket{}
-	for start := 0; start < total; {
-		end := min(start+limit, total)
-		if end < total {
-			boundary := end
-			best := start
-			for _, s := range d.Segments {
-				if s.CharEnd > best && s.CharEnd <= boundary {
-					best = s.CharEnd
-				}
-			}
-			if best > start {
-				end = best
-			}
-		}
-		p := analysisPacket{Start: start, End: end, Passages: []Evidence{}}
-		cursor := start
-		for _, c := range d.Chunks {
-			if c.CharEnd <= cursor {
-				continue
-			}
-			if c.CharStart >= end {
-				break
-			}
-			if c.CharStart > cursor {
-				return nil, errors.New("analysis: text has no evidence")
-			}
-			stop := min(c.CharEnd, end)
-			p.Passages = append(p.Passages, evidence(d, c, cursor, stop))
-			cursor = stop
-			if cursor == end {
-				break
-			}
-		}
-		if cursor != end {
-			return nil, errors.New("analysis: text has no evidence")
-		}
-		out = append(out, p)
-		start = end
+// packetReader materializes only the next requested range. Both metadata
+// cursors move forward, so untouched document tails incur no preparation work.
+// Overlapping retrieval chunks are clipped, never omitted or counted twice.
+type packetReader struct {
+	document              documents.Document
+	total, limit          int
+	start, segment, chunk int
+}
+
+func (r *packetReader) next(ctx context.Context) (analysisPacket, error) {
+	if err := ctx.Err(); err != nil {
+		return analysisPacket{}, err
 	}
-	return out, nil
+	end := min(r.start+r.limit, r.total)
+	if end < r.total {
+		best := r.start
+		for r.segment < len(r.document.Segments) {
+			if err := ctx.Err(); err != nil {
+				return analysisPacket{}, err
+			}
+			boundary := r.document.Segments[r.segment].CharEnd
+			if boundary > end {
+				break
+			}
+			if boundary > best {
+				best = boundary
+			}
+			r.segment++
+		}
+		if best > r.start {
+			end = best
+		}
+	}
+	p := analysisPacket{Start: r.start, End: end, Passages: []Evidence{}}
+	cursor := r.start
+	for cursor < end && r.chunk < len(r.document.Chunks) {
+		if err := ctx.Err(); err != nil {
+			return analysisPacket{}, err
+		}
+		c := r.document.Chunks[r.chunk]
+		if c.CharEnd <= cursor {
+			r.chunk++
+			continue
+		}
+		if c.CharStart > cursor {
+			return analysisPacket{}, errors.New("analysis: text has no evidence")
+		}
+		stop := min(c.CharEnd, end)
+		p.Passages = append(p.Passages, evidence(r.document, c, cursor, stop))
+		cursor = stop
+		if cursor == c.CharEnd {
+			r.chunk++
+		}
+	}
+	if cursor != end {
+		return analysisPacket{}, errors.New("analysis: text has no evidence")
+	}
+	if err := ctx.Err(); err != nil {
+		return analysisPacket{}, err
+	}
+	r.start = end
+	return p, nil
 }
 
 func parseObservations(content *string, allowed map[string]bool) (*Observations, error) {

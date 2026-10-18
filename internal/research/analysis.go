@@ -51,14 +51,18 @@ func (a *Analyzer) Analyze(ctx context.Context, owner, runID, docID, question st
 		return out, errors.New("text_unusable")
 	}
 	out.Status = "partial"
-	var parts []analysisPacket
-	parts, err = packets(d, a.cfg.MaxSegmentRunes)
-	if err != nil {
-		return out, err
-	}
-	for i, p := range parts {
+	reader := packetReader{document: d, total: out.TotalRunes, limit: a.cfg.MaxSegmentRunes}
+	for i := 0; reader.start < out.TotalRunes; i++ {
 		if i >= a.cfg.MaxRequests {
 			return out, ErrAnalysisBudget
+		}
+		if err = a.running(ctx, owner, runID); err != nil {
+			return out, err
+		}
+		var p analysisPacket
+		p, err = reader.next(ctx)
+		if err != nil {
+			return out, err
 		}
 		payload := struct {
 			Question         string              `json:"question"`
@@ -83,16 +87,17 @@ func (a *Analyzer) Analyze(ctx context.Context, owner, runID, docID, question st
 		out.SuccessfulRanges = append(out.SuccessfulRanges, Range{p.Start, p.End})
 		out.Observations = append(out.Observations, *obs)
 		finalizeCoverage(&out, d, false)
-		progress, _ := json.Marshal(map[string]any{"analysis_id": out.ID, "document_id": docID, "successful_parts": len(out.SuccessfulRanges), "total_parts": len(parts), "covered_runes": out.CoveredRunes, "total_runes": out.TotalRunes, "analysis_status": "partial"})
+		progress, _ := json.Marshal(map[string]any{"analysis_id": out.ID, "document_id": docID, "successful_parts": len(out.SuccessfulRanges), "covered_runes": out.CoveredRunes, "total_runes": out.TotalRunes, "analysis_status": "partial"})
 		if err = a.db.AppendEvent(ctx, owner, runID, "analysis_progress", progress, nil); err != nil {
 			return out, err
 		}
 	}
-	if len(parts) == 1 {
+	partCount := len(out.SuccessfulRanges)
+	if partCount == 1 {
 		out.Synthesis = &out.Observations[0]
 		return out, nil
 	}
-	if len(parts) >= a.cfg.MaxRequests {
+	if partCount >= a.cfg.MaxRequests {
 		return out, ErrAnalysisBudget
 	}
 	allowed := map[string]bool{}
@@ -109,7 +114,7 @@ func (a *Analyzer) Analyze(ctx context.Context, owner, runID, docID, question st
 	if len([]rune(string(synthesis))) > a.cfg.MaxSynthesisRunes {
 		return out, ErrAnalysisContext
 	}
-	out.Synthesis, err = a.step(ctx, owner, runID, out.ID, len(parts), "synthesis", analysisPacket{}, string(synthesis), ids, allowed, complete)
+	out.Synthesis, err = a.step(ctx, owner, runID, out.ID, partCount, "synthesis", analysisPacket{}, string(synthesis), ids, allowed, complete)
 	return out, err
 }
 

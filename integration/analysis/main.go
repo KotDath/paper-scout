@@ -456,7 +456,7 @@ func localCheck(runtime string) error {
 		return errors.New("duplicate range inflated coverage")
 	}
 	fmt.Println("PASS: completed results/evidence survive SQLite reopen; production interrupted recovery preserves successful prefix, excludes pending steps, does no paid replay; duplicate ranges do not inflate coverage")
-	return nil
+	return largeDocuments(ctx, runtime, db)
 }
 
 func verifyTrace(ctx context.Context, db *store.Store, doc documents.Document, out research.Analysis) error {
