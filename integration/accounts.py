@@ -76,7 +76,7 @@ def login(base, login_name, password):
     return body
 
 
-def main():
+def main(binary=None):
     RUNTIME.mkdir(parents=True, exist_ok=True)
     build_env = os.environ.copy()
     for key, name in [("GOCACHE", "gocache"), ("GOMODCACHE", "gomod"),
@@ -87,9 +87,10 @@ def main():
 
     with tempfile.TemporaryDirectory(prefix="accounts-", dir=RUNTIME) as temporary:
         work = Path(temporary)
-        binary = work / "paper-scout"
-        subprocess.run(["go", "build", "-o", str(binary), "./cmd/paper-scout"],
-                       cwd=ROOT, env=build_env, check=True)
+        if binary is None:
+            binary = work / "paper-scout"
+            subprocess.run(["go", "build", "-o", str(binary), "./cmd/paper-scout"],
+                           cwd=ROOT, env=build_env, check=True)
         env = build_env | {
             "HTTP_ADDR": "127.0.0.1:0", "SQLITE_PATH": str(work / "accounts.sqlite"),
             "CACHE_DIR": str(work / "cache"), "SEED_USER_1_LOGIN": "researcher-a",

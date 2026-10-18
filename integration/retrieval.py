@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""T08 integration: real SQLite/auth/HTTP/documents and existing live Ollama.
+"""T08/T15 integration: real SQLite/auth/HTTP/documents and existing live Ollama.
+--fixture replaces only external embedding HTTP, and is NOT live inference.
 No model download, paid calls, dotenv inspection, or unit tests.
 """
 import os
