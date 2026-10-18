@@ -26,6 +26,17 @@ func RegisterResearchMemory(mux *http.ServeMux, db *store.Store, s *researchmemo
 		}
 		writeJSON(w, 200, out)
 	})
+	protect("GET /api/v1/reports/{id}/research-memory", func(w http.ResponseWriter, r *http.Request) {
+		if !noQuery(w, r) {
+			return
+		}
+		u, _ := UserFromContext(r.Context())
+		out, err := s.AnnotationsForReport(r.Context(), u.ID, r.PathValue("id"))
+		if memoryError(w, err) {
+			return
+		}
+		writeJSON(w, 200, out)
+	})
 	protect("GET /api/v1/research-memory/{id}", func(w http.ResponseWriter, r *http.Request) {
 		if !noQuery(w, r) {
 			return

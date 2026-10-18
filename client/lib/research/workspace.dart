@@ -8,9 +8,8 @@ import 'research_memory.dart';
 
 part 'memory_widgets.dart';
 
-typedef OpenResource =
-    void Function(String kind, String id, {String? memoryId});
-typedef ResourceTarget = (String, String, String?);
+typedef OpenResource = void Function(String kind, String id);
+typedef ResourceTarget = (String, String);
 
 String statusText(dynamic status) =>
     const {
@@ -99,9 +98,9 @@ class _ResearchWorkspaceState extends State<ResearchWorkspace> {
     });
   }
 
-  void open(String kind, String id, {String? memoryId}) => setState(() {
+  void open(String kind, String id) => setState(() {
     if (detail != null) _history.add(detail!);
-    detail = (kind, id, memoryId);
+    detail = (kind, id);
   });
 
   @override
@@ -120,7 +119,6 @@ class _ResearchWorkspaceState extends State<ResearchWorkspace> {
             api: api,
             kind: inner.$1,
             id: inner.$2,
-            memoryId: inner.$3,
             open: open,
           )
         : switch (tab) {
@@ -701,12 +699,10 @@ class ResourcePane extends StatefulWidget {
     required this.api,
     required this.kind,
     required this.id,
-    this.memoryId,
     required this.open,
   });
   final ResearchApi api;
   final String kind, id;
-  final String? memoryId;
   final OpenResource open;
   @override
   State<ResourcePane> createState() => _ResourcePaneState();
@@ -714,7 +710,7 @@ class ResourcePane extends StatefulWidget {
 
 class _ResourcePaneState extends State<ResourcePane> {
   Json? data;
-  Json? currentMemory;
+  List<MemoryHit>? currentAnnotations;
   ReportMemory? reportMemory;
   String memoryError = '';
   String error = '', notice = '';
@@ -739,7 +735,7 @@ class _ResourcePaneState extends State<ResourcePane> {
     setState(() {
       busy = true;
       error = '';
-      currentMemory = null;
+      currentAnnotations = null;
       memoryError = '';
     });
     try {
@@ -764,12 +760,17 @@ class _ResourcePaneState extends State<ResourcePane> {
         read = loaded['read'] == true;
         note.text = loaded['note'] as String? ?? '';
       });
-      if (widget.kind == 'reports' && widget.memoryId != null) {
+      if (widget.kind == 'reports') {
         try {
-          final entry = await widget.api.memory(widget.memoryId!);
+          final response = await widget.api.reportAnnotations(widget.id);
+          if (response['report_id'] != widget.id ||
+              response['items'] is! List) {
+            throw const FormatException();
+          }
+          final annotations = ReportMemory.hits(response['items']);
           if (mounted) {
             setState(() {
-              currentMemory = entry;
+              currentAnnotations = annotations;
               memoryError = '';
             });
           }
@@ -888,7 +889,7 @@ class _ResourcePaneState extends State<ResourcePane> {
           Text('Ограничение: $limit'),
         if (origin['report_id'] case final String reportId)
           TextButton(
-            onPressed: () => widget.open('reports', reportId, memoryId: hit.id),
+            onPressed: () => widget.open('reports', reportId),
             child: const Text('Открыть прошлый отчёт'),
           ),
         if (origin['paper_version_id'] case final String paperId)
@@ -1091,20 +1092,17 @@ class _ResourcePaneState extends State<ResourcePane> {
     const Text(
       'Ответ помощника. Утверждения проверяйте по исходным фрагментам.',
     ),
-    if (widget.memoryId != null) ...[
-      heading(context, 'Актуальное состояние памяти'),
-      const Text(
-        'Исторический отчёт сохранён без изменений. Ниже — текущие поправки к открытой записи.',
-      ),
-      if (memoryError.isNotEmpty) problem(memoryError, load),
-      if (currentMemory != null) ...[
-        MemoryCard(hit: MemoryHit.fromJson(currentMemory!), open: widget.open),
-        for (final annotation in ReportMemory.hits(
-          currentMemory!['annotations'],
-        ))
-          MemoryCard(hit: annotation, open: widget.open),
-      ],
-    ],
+    heading(context, 'Актуальные заметки и поправки отчёта'),
+    const Text(
+      'Исторический отчёт и снимок запуска сохранены без изменений. Здесь — текущее состояние всех связанных записей, независимо от пути открытия.',
+    ),
+    if (memoryError.isNotEmpty) problem(memoryError, load),
+    if (currentAnnotations case final annotations?) ...[
+      if (annotations.isEmpty) const Text('Актуальных заметок и поправок нет.'),
+      for (final entry in annotations)
+        MemoryCard(hit: entry, open: widget.open),
+    ] else if (memoryError.isEmpty)
+      const Text('Загрузка актуальных заметок и поправок…'),
     if (reportMemory case final memory?)
       MemorySection(memory: memory, open: widget.open),
     for (final block in (d['markdown'] as String).split('\n\n'))

@@ -138,8 +138,10 @@ Only markers present in `referenced` receive a memory navigation button.
 
 Open an entry to inspect current provenance, coverage, notes, corrections and
 revision, then follow its report, paper/note or original evidence. Returning keeps
-the selected run, including a manually selected older run. A historical report
-opened from an entry also fetches current annotations beside its immutable text.
+the selected run, including a manually selected older run. Every report fetches current notes/corrections for its whole episode and derived
+claims via `GET /api/v1/reports/{id}/research-memory`, including when opened
+directly from conversation history or through a different card. These current
+annotations remain separate from immutable report text and the run snapshot.
 Correction and exclusion/restore use `expected_revision`; after a failed PATCH,
 reload the current revision before explicitly resubmitting the preserved draft.
 User corrections are edited through their target, as required by T19. Notes remain
@@ -163,7 +165,8 @@ disposable input credentials in the harness; never reuse them outside integratio
 Add an adb reverse rule for the printed port and enter that origin in Flutter.
 
 In account A, conversation **b** contains a newer failed run and an older completed
-run: select the completed run to open the snapshot. Its claim/note point to **a**.
+run: select the completed run to open the snapshot. Its two different claims and note point to **a**; a correction to either claim
+must appear when report **a** is opened from history or via the other claim.
 Reports **c/d** deliberately supply empty lexical-only / hybrid-partial snapshots,
 with `T21_MODE_HTTP_FIXTURE_NO_REAL_OUTAGE`; **a/e** omit / null the extension.
 These fixtures verify presentation, not automatic recall or live scientific

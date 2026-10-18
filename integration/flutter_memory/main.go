@@ -73,8 +73,14 @@ func main() {
 	if claim.MemoryID == "" || note.MemoryID == "" {
 		panic("missing real recalled claim/note")
 	}
+	// Include a different card of the same report to verify that navigation
+	// through it cannot hide a correction made to the first card.
+	var otherID string
+	must(db.DB.QueryRow(`SELECT id FROM research_memories WHERE owner='owner_a' AND kind='claim' AND paper_id='paper_a' AND id!=? ORDER BY facet LIMIT 1`, claim.MemoryID).Scan(&otherID))
+	otherEntry, err := memory.Get(ctx, "owner_a", otherID)
+	must(err)
 	// Immutable fixture of the agreed nullable T20 extension, no agent changes.
-	snapshot := map[string]any{"retrieval_mode": result.RetrievalMode, "reasons": []string{"T21_HTTP_SNAPSHOT_FIXTURE_NO_AGENT_RECALL"}, "recalled": []researchmemory.Hit{claim, note}, "referenced": []researchmemory.Hit{claim}}
+	snapshot := map[string]any{"retrieval_mode": result.RetrievalMode, "reasons": []string{"T21_HTTP_SNAPSHOT_FIXTURE_NO_AGENT_RECALL"}, "recalled": []researchmemory.Hit{claim, otherEntry.Hit, note}, "referenced": []researchmemory.Hit{claim}}
 	// Additional mode/nullable snapshots are HTTP boundary fixtures, never
 	// represented as a real Ollama outage or completed agent research.
 	for _, key := range []string{"c", "d", "e"} {
@@ -126,7 +132,7 @@ func main() {
 	fmt.Println("T21: synthetic research and HTTP snapshot fixture; real Go/SQLite/auth/Qwen3; no DeepSeek or arXiv calls")
 	if *ui {
 		fmt.Println("T21 UI API:", server.URL)
-		must(os.WriteFile(filepath.Join(*dir, "ui.json"), []byte(mustJSON(map[string]any{"base": server.URL, "claim": claim.MemoryID, "note": note.MemoryID})), 0600))
+		must(os.WriteFile(filepath.Join(*dir, "ui.json"), []byte(mustJSON(map[string]any{"base": server.URL, "claim": claim.MemoryID, "note": note.MemoryID, "other_claim": otherID})), 0600))
 		done, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 		defer stop()
 		<-done.Done()

@@ -86,6 +86,8 @@ class ResearchApi {
     '/api/v1/library/search',
     body: {'query': query, 'limit': 8},
   );
+  Future<Json> reportAnnotations(String id) =>
+      client.requestJson('GET', '${path('reports', id)}/research-memory');
   Future<Json> memory(String id) =>
       client.requestJson('GET', path('research-memory', id));
   Future<Json> updateMemory(String id, Json patch) =>
