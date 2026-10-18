@@ -13,7 +13,6 @@ class ScoutUser {
 class AuthController extends ChangeNotifier {
   AuthController() {
     try {
-      api.close();
       api = ApiClient(
         const String.fromEnvironment(
           'API_BASE_URL',
@@ -27,7 +26,7 @@ class AuthController extends ChangeNotifier {
     api.onUnauthorized = _unauthorized;
   }
 
-  ApiClient api = ApiClient('http://127.0.0.1:8080');
+  late ApiClient api;
   ScoutUser? user;
   DateTime? expiresAt;
   bool busy = false;
