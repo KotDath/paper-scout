@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
+	"slices"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -73,7 +75,6 @@ func (a *AgentRunner) recall(ctx context.Context, run store.Run, point, query st
 		snap.Reasons = append(snap.Reasons, found.Reasons...)
 		// The service retains complete per-base annotation closures even when
 		// public Hits deduplicates a correction shared by several groups.
-		groups := found.Groups
 		already := map[string]bool{}
 		origins := map[string]bool{}
 		for _, p := range previous {
@@ -84,7 +85,7 @@ func (a *AgentRunner) recall(ctx context.Context, run store.Run, point, query st
 				}
 			}
 		}
-		for _, group := range groups {
+		for _, group := range found.Groups {
 			duplicate := true
 			for _, h := range group {
 				if !already[fmt.Sprintf("%s:%d:%d", h.MemoryID, h.Revision, h.CharStart)] {
@@ -94,10 +95,7 @@ func (a *AgentRunner) recall(ctx context.Context, run store.Run, point, query st
 			if duplicate {
 				continue
 			}
-			nextOrigins := map[string]bool{}
-			for id := range origins {
-				nextOrigins[id] = true
-			}
+			nextOrigins := maps.Clone(origins)
 			for _, h := range group {
 				for _, o := range h.Origins {
 					nextOrigins[o.ReportID] = true
@@ -108,8 +106,8 @@ func (a *AgentRunner) recall(ctx context.Context, run store.Run, point, query st
 				continue
 			}
 			candidate := snap
-			candidate.Hits = append(append([]store.MemoryHit{}, snap.Hits...), group...)
-			raw, _ := json.Marshal(append(append([]store.MemorySnapshot{}, previous...), candidate))
+			candidate.Hits = append(slices.Clone(snap.Hits), group...)
+			raw, _ := json.Marshal(append(slices.Clone(previous), candidate))
 			if utf8.RuneCount(raw) > cap-256 {
 				snap.Reasons = appendUnique(snap.Reasons, "memory_prompt_budget")
 				continue
@@ -119,7 +117,7 @@ func (a *AgentRunner) recall(ctx context.Context, run store.Run, point, query st
 		}
 	}
 	// Diagnostics are bounded too, even with a large historical job backlog.
-	raw, err := json.Marshal(append(append([]store.MemorySnapshot{}, previous...), snap))
+	raw, err := json.Marshal(append(slices.Clone(previous), snap))
 	if err != nil {
 		return err
 	}
@@ -144,7 +142,7 @@ func (a *AgentRunner) recall(ctx context.Context, run store.Run, point, query st
 // not just the decoded query length. A context that cannot fit is never saved.
 func fitRecallQuery(previous []store.MemorySnapshot, snap *store.MemorySnapshot, cap int) error {
 	size := func() (int, error) {
-		raw, err := json.Marshal(append(append([]store.MemorySnapshot{}, previous...), *snap))
+		raw, err := json.Marshal(append(slices.Clone(previous), *snap))
 		return utf8.RuneCount(raw), err
 	}
 	n, err := size()
