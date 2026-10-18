@@ -2,7 +2,9 @@ package researchtools
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"paper-scout/internal/agent"
@@ -19,7 +21,10 @@ type libraryState struct {
 
 func (t *tools) known(ctx context.Context, owner, paper string) (libraryState, error) {
 	var out libraryState
-	err := t.db.DB.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM user_papers WHERE user_id=? AND paper_version_id=?),COALESCE((SELECT saved FROM user_papers WHERE user_id=? AND paper_version_id=?),0),COALESCE((SELECT read FROM user_papers WHERE user_id=? AND paper_version_id=?),0)`, owner, paper, owner, paper, owner, paper).Scan(&out.PreviouslyKnown, &out.Saved, &out.Read)
+	err := t.db.DB.QueryRowContext(ctx, `SELECT 1,saved,read FROM user_papers WHERE user_id=? AND paper_version_id=?`, owner, paper).Scan(&out.PreviouslyKnown, &out.Saved, &out.Read)
+	if errors.Is(err, sql.ErrNoRows) {
+		return out, nil
+	}
 	return out, err
 }
 func (t *tools) searchPapers(ctx context.Context, s agent.Scope, raw json.RawMessage) (json.RawMessage, error) {
