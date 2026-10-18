@@ -104,6 +104,48 @@ reasoning и PDF в сдачу Git не включаются.
 Повторный запуск приложения, проверок и записи: [runbook](local-development.md).
 Машиночитаемый DAG и отметку done после ревью/слияния обновляет координатор.
 
-## Следующая приёмка: память исследований
+## Память исследований
 
 T01–T18 закрывают предыдущую сдачу дня35. Новое требование пользователя — другой диалог после рестарта, автоматическое воспоминание исследования A и заметки, осмысленное сравнение с B и проверяемые ссылки. Предыдущее видео этого не доказывает. Критерии T22 и отдельный research-memory-demo.mp4 — в [плане](research-memory.md#приёмка--t22).
+
+## T22 — новая production попытка, приёмка blocked
+
+2026-10-18/19: обычный `cmd/paper-scout`, новая БД, Flutter на эмуляторе,
+claude-in-mobile, настоящие DeepSeek/arXiv/Qwen3. Новая основная ссылка —
+[paper-scout-full-demo.mp4](../artifacts/paper-scout-full-demo.mp4), 6:46,
+720×1780/30 fps, H.264, без аудио. Непрерывная запись ускорена 2x, скорость
+и `Acceptance BLOCKED` подписаны постоянно. Это **попытка walkthrough**, а не
+видео всех принятых функций. [research-memory-demo.mp4](../artifacts/research-memory-demo.mp4)
+— отдельный memory excerpt 4:44, 720×1740, из того же raw без внутренних cuts.
+Старое видео не перезаписывалось. Хеши/команды/расход: [T22](verification/T22.md).
+
+Таймкоды ниже ориентировочные, относятся к **full** версии 2x. Supporting
+artifacts — ignored локальные файлы T22; их отсутствие в clone не означает
+наличие видео или пройденную приёмку. Contact sheet подтверждает расположение
+сцен; интеграционный лог не выдаётся за кадр.
+
+| Функция → действие | Ожидаемое доказательство | Сцена / факт | Supporting artifact |
+| --- | --- | --- | --- |
+| Адрес API, неверный вход, вход, профиль | Понятная ошибка и сохранённые интересы | Показано 0:00–0:45 | full MP4, `t22-contact.png` |
+| Новый A, настоящий поиск/анализ/прогресс | arXiv и завершённый отчёт/coverage | Показано 0:45–1:28; complete 39757/39757 | full MP4, `t22-public-evidence.json` |
+| Saved/read и личная note | Явное сохранение и пользовательское происхождение | Показано 1:28–1:56 | full MP4, public library |
+| Go/Flutter restart, история/библиотека/профиль | Данные пережили рестарт | UI 1:56–2:35; Go restart — отдельный process log | full MP4, `.bb/runtime/t22/final-server.log` |
+| Новый диалог B без A в вопросе | Автоматическая связь с прежним исследованием | Новый диалог/вопрос/прогресс 2:35–3:20; automatic recall подтверждён seq3 перед seq4 | full MP4, `t22-http-checks.json` |
+| Самопроизвольное проверенное сравнение A/B и note | Полные ссылки и original passages обеих работ | **FAIL** первого B: citations=0, shortened note marker, A не прочитан. Текст в основном виден в collapsed preview; законченная сцена сравнения не заявляется | `t22-public-evidence.json`, report B |
+| Уточнение с hybrid retrieval | BM25+dense+RRF и исходные citations | Follow-up 3:25–3:50; 8 citations, но одна unresolved memory-ссылка | full MP4, follow-up report |
+| Recalled/referenced и provenance, старый отчёт | Разные секции и переходы | Показано 3:50–4:40; открытие A и его evidence | full MP4, memory API |
+| Full text vs index vs reading | Координаты/предупреждения/coverage, не взаимозаменяемые статусы | Source/index видны около 1:30, coverage 1:20/3:05; original A 4:10–4:25, B 5:50–6:10 | full MP4, original public evidence |
+| Correction / disputed / revision / exclude / restore | Актуальная аннотация рядом с immutable A | Показано 4:40–5:20; revision 1→4. Эффект на будущий **ответ** не проверен | full MP4, `t22-rebuild-check.json` |
+| Библиотечный поиск | Настоящие BM25/dense/RRF ranks | Показано 5:35–5:50; 81/81, кандидаты 20/20 | full MP4, live HTTP |
+| 401, смена аккаунта, logout | Удаление сессии, отдельные данные B | Показано 6:10–6:46. 401 — явная server session-expiry fixture, не outage провайдера | full MP4, `t22-http-checks.json` |
+| NOOP, correction/exclusion, note edit/clear после rebuild/restart | Состояние не воскресло, snapshots неизменны | HTTP/direct Service/OS проверки PASS, **не показано на видео** | `t22-note-lifecycle.json`, `t22-rebuild-check.json` |
+| Memory on/off контроль | Тот же B, новый диалог без A/note при off | Один live off run PASS, **не показан** | `t22-memory-off-control.json` |
+| Старый отчёт во время активного follow-up, cancellation | Просмотр/отмена без потери результата | **Не показано** в T22 | Только synthetic integration/agentmemory; не video credit |
+| Partial/abstract-only, pending/unavailable/lexical-only, сеть | Реальные подписи ограничений | **Не показано** в T22; extraction warning и 401 не заменяют эти состояния | Исторические fixtures T15/T19–T21, не новая video acceptance |
+
+Остаются обязательными успешный первый B с проверенными A/B citations,
+исправление semantic ошибок/искажения note, negative recall и намеренно
+неверный старый claim с валидным evidence, ответ после correction, полная новая
+запись недостающих сцен. Completed run, наличие generated cards или старое
+видео не закрывают эти пункты. Статус **blocked**, подробности и конкретные
+required fixes — [verification/T22.md](verification/T22.md).

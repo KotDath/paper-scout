@@ -1,11 +1,20 @@
 # Память между исследованиями
 
-Статус: T19 реализует хранилище, capture/consolidation, hybrid search и HTTP;
-реализация T20 подключает automatic recall к агенту и production entrypoint.
-Flutter и новая сквозная приёмка остаются в T21–T22.
+Статус: T19–T21 реализуют хранилище, capture/consolidation, hybrid search,
+automatic recall в production и Flutter. T22 проверил обычный cmd/paper-scout
+с реальными источниками/DeepSeek/Ollama и записал новую попытку. **Приёмка
+blocked:** первый ответ B не проверил A и сократил citations. Исправление
+вытеснения scientific origin заметкой и результаты: [T22](verification/T22.md).
 Пользователь попросил сначала изучить подходы долговременной памяти; выбор обоснован в
-[memory-approaches.md](memory-approaches.md). Полный пользовательский сценарий ещё не реализован.
+[memory-approaches.md](memory-approaches.md). Полный пользовательский сценарий ещё не прошёл приёмку.
 Прежняя сдача дня 35 остаётся историческим результатом.
+
+Уточнение отбора T22: если лучший hit paper-group — user_note, сначала
+пробуется лучший scientific claim того же paper из текущего owner-filtered
+BM25/dense union. Note присоединяется к нему как mandatory annotation.
+Так note не вытесняет report/evidence origin единственным местом группы.
+Ранги/score кандидатов не переписываются. Нет подходящего/помещающегося claim —
+остаётся standalone note; она не получает выдуманного scientific provenance.
 
 ## Пользовательский результат
 

@@ -362,7 +362,24 @@ func (s *Service) Search(ctx context.Context, owner string, req SearchRequest) (
 	emitted := map[string]bool{}
 	groups := 0
 	usedOrigins := map[string]bool{}
+	// Rank paper groups by their best hit, but prefer a scientific representative
+	// when a note ranks first. Its current note is already a mandatory annotation.
+	// Otherwise the note consumes the paper's sole group and hides every report /
+	// evidence link. Only consider claims present in the owner-scoped top-k union;
+	// keep their actual branch ranks/scores and fall back to the note if none fits.
+	selection := make([]Hit, 0, len(ranked)*2)
 	for _, h := range ranked {
+		if h.Kind == "user_note" {
+			for _, candidate := range ranked {
+				if candidate.Kind == "claim" && candidate.PaperVersionID == h.PaperVersionID {
+					selection = append(selection, candidate)
+					break
+				}
+			}
+		}
+		selection = append(selection, h)
+	}
+	for _, h := range selection {
 		if emitted[h.MemoryID] {
 			continue
 		}
