@@ -35,8 +35,9 @@ func main() {
 	runtime := flag.String("runtime", "", "temporary directory inside assigned worktree")
 	envFile := flag.String("env-file", "", "optional dotenv path loaded only by application config")
 	artifact := flag.String("artifact", "", "sanitized JSON evaluation path")
+	fixture := flag.Bool("fixture", false, "deterministic external embedding HTTP fixture; NOT live inference")
 	flag.Parse()
-	if err := run(*runtime, *envFile, *artifact); err != nil {
+	if err := run(*runtime, *envFile, *artifact, *fixture); err != nil {
 		fmt.Fprintln(os.Stderr, "FAIL:", err)
 		os.Exit(1)
 	}
@@ -48,21 +49,32 @@ type evaluation struct {
 	Result   retrieval.SearchResult `json:"result"`
 }
 
-func run(runtime, envFile, artifact string) error {
+func run(runtime, envFile, artifact string, fixture bool) error {
 	if runtime == "" {
 		return errors.New("runtime is required")
 	}
-	if _, err := config.Load(envFile); err != nil {
-		return err
+	if fixture && envFile != "" {
+		return errors.New("fixture mode does not load dotenv")
 	}
-	cfg, err := embeddings.ConfigFromEnv()
-	if err != nil {
-		return err
+	var cfg embeddings.Config
+	if fixture {
+		boundary := embeddingFixture()
+		defer boundary.Close()
+		cfg = embeddings.Config{BaseURL: boundary.URL}
+	} else {
+		if _, err := config.Load(envFile); err != nil {
+			return err
+		}
+		var err error
+		cfg, err = embeddings.ConfigFromEnv()
+		if err != nil {
+			return err
+		}
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Minute)
 	defer cancel()
-	// The proxy forwards all healthy requests to actual Ollama. An explicit 503
-	// switch gives deterministic outage evidence without stopping shared Ollama.
+	// The proxy forwards healthy requests to the selected external HTTP boundary.
+	// Its 503 switch never stops or reconfigures the shared Ollama process.
 	backend := cfg.BaseURL
 	if backend == "" {
 		backend = "http://127.0.0.1:11434"
@@ -98,7 +110,11 @@ func run(runtime, envFile, artifact string) error {
 	if err != nil {
 		return fmt.Errorf("live Ollama preflight: %w", err)
 	}
-	fmt.Printf("PASS live Ollama: model=%s digest=%s dimensions=%d encoding=%s\n", client.Identity().Model, client.Identity().Digest, client.Identity().Dimensions, client.Identity().EncodingVersion)
+	mode := "live Ollama"
+	if fixture {
+		mode = "HTTP embedding fixture (NOT live inference)"
+	}
+	fmt.Printf("PASS %s: model=%s digest=%s dimensions=%d encoding=%s\n", mode, client.Identity().Model, client.Identity().Digest, client.Identity().Dimensions, client.Identity().EncodingVersion)
 	dbPath := filepath.Join(runtime, "retrieval.sqlite")
 	db, err := store.Open(ctx, dbPath)
 	if err != nil {
@@ -188,6 +204,11 @@ func run(runtime, envFile, artifact string) error {
 		}
 		if c.name == "exact" && len(result.LexicalCandidates) == 0 {
 			return errors.New("exact query did not execute BM25")
+		}
+		if fixture && c.name == "exact" {
+			if err = knownRanks(result); err != nil {
+				return err
+			}
 		}
 		if c.name == "unrelated" && len(result.LexicalCandidates) != 0 {
 			return errors.New("unrelated query unexpectedly matched lexical corpus")

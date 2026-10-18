@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -91,14 +92,22 @@ func importCorpus(ctx context.Context, db *store.Store, runtime string) ([]docum
 	return result, nil
 }
 
-func scopeLimit(ctx context.Context, db *store.Store, service *retrieval.Service, source documents.Document) error {
+func scopeLimit(ctx context.Context, db *store.Store, service *retrieval.Service, source documents.Document) (resultErr error) {
 	// Remove this intentionally oversized SQL fixture afterwards, without touching the
 	// live source or leaving artificial domain rows behind after this check.
 	_, err := db.DB.ExecContext(ctx, `INSERT INTO documents SELECT 'large_document',paper_version_id,format,'large_hash',extractor_version,chunking_version,extraction_status,source_url,local_path,text,segments_json,warnings_json,created_at FROM documents WHERE id=?`, source.ID)
 	if err != nil {
 		return err
 	}
-	defer db.DB.ExecContext(context.WithoutCancel(ctx), `DELETE FROM documents WHERE id='large_document'`)
+	defer func() {
+		// Remove the disposable fixture's FTS rows in one pass before cascade.
+		// The production per-chunk trigger scans an UNINDEXED FTS column; leaving
+		// 20k fixture rows there makes cleanup quadratic under the race detector.
+		// Assertions before cleanup use the unmodified real index/triggers.
+		_, ftsErr := db.DB.ExecContext(context.WithoutCancel(ctx), `DELETE FROM chunks_fts WHERE chunk_id IN (SELECT id FROM chunks WHERE document_id='large_document')`)
+		_, deleteErr := db.DB.ExecContext(context.WithoutCancel(ctx), `DELETE FROM documents WHERE id='large_document'`)
+		resultErr = errors.Join(resultErr, ftsErr, deleteErr)
+	}()
 	_, err = db.DB.ExecContext(ctx, `WITH RECURSIVE n(x) AS (VALUES(0) UNION ALL SELECT x+1 FROM n WHERE x<20000)
  INSERT INTO chunks(id,document_id,ordinal,text,char_start,char_end,section) SELECT 'large_chunk_'||x,'large_document',x,'scope fixture',0,13,'scope' FROM n`)
 	if err != nil {
