@@ -4,6 +4,7 @@ import argparse
 import fcntl
 import json
 from pathlib import Path
+import re
 import subprocess
 import sys
 import time
@@ -79,7 +80,8 @@ def main():
     data = json.loads(Path(opts.input_file).read_text())
     root = Path(data["root"])
     node = data["task"]["id"]
-    if node not in {f"T{i:02d}" for i in range(1, 19)}:
+    tasks = json.loads((root / "docs/implementation-tasks.json").read_text())["tasks"]
+    if not isinstance(node, str) or not re.fullmatch(r"T[0-9]{2,}", node) or node not in {task["id"] for task in tasks}:
         raise RuntimeError("Invalid node")
     scratch = root / ".bb/runtime/nodes" / node
     scratch.mkdir(parents=True, exist_ok=True)
