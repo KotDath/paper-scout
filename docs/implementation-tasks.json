@@ -4,7 +4,7 @@
   "tasks": [
     {"id":"T01","title":"Go foundation и SQLite","depends_on":[],"status":"done"},
     {"id":"T02","title":"Аккаунты и ownership","depends_on":["T01"],"status":"todo"},
-    {"id":"T03","title":"DeepSeekClient","depends_on":["T01"],"status":"todo"},
+    {"id":"T03","title":"DeepSeekClient","depends_on":["T01"],"status":"done"},
     {"id":"T04","title":"arXiv adapter","depends_on":["T01"],"status":"todo"},
     {"id":"T05","title":"HTML и PDF","depends_on":["T01"],"status":"todo"},
     {"id":"T06","title":"EmbeddingClient Ollama","depends_on":["T01"],"status":"todo"},

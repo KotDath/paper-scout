@@ -24,6 +24,29 @@
         "go vet ./... and go mod verify: passed with worktree-local caches.",
         "gofmt and git diff --check: passed; no unit/widget test files; Flutter and external provider calls outside T01 scope and not run."
       ]
+    },
+    "T03": {
+      "status": "done",
+      "worktree": "/home/kotdath/omp/personal/ai/paper-scout-worktrees/T03",
+      "branch": "dag/t03",
+      "threads": {
+        "executor": "thr_mu5yxyfrh7",
+        "reviewer": "thr_7xu8mkg2d6",
+        "simplifier": "thr_xqukkj7qcr"
+      },
+      "base_sha": "01131aba83491b196e75ace742625a2fad0c1d57",
+      "approved_head_sha": "a97d1350bd2b0de0b420093f8fb49b8a8b1da8b5",
+      "merge_sha": "a987b2f302d26407ee84c2437ec7b8747e85f7b3",
+      "checks": [
+        "Pre-merge: main clean at expected 01131aba; base ancestor; dag/t03 and clean worktree at approved a97d135; two reviews, simplification and final reviewer approval confirmed; verify.patch matches approved diff.",
+        "git merge --no-ff dag/t03: passed without conflicts; independent worktrees preserved.",
+        "python3 integration/deepseek.py: passed; real local HTTP completion/tool exchange, private reasoning replay, usage, error classification, sanitization, redirects, oversized/truncated responses, cancellation and deadlines.",
+        "python3 integration/foundation.py: passed; real server HTTP/SQLite, FTS5/BM25, concurrent readiness, WAL, private DB, persistence/restart, extraction-tool readiness, migration drift and sanitized configuration checks; ephemeral ports and temporary database.",
+        "go build ./..., go vet ./... and go mod verify: passed with root-worktree-local caches and outputs; initial fresh-cache build interrupted during stalled dependency download, then passed with existing root cache and GOPROXY=off.",
+        "gofmt and git diff --check: passed; no tracked unit/widget tests added or run.",
+        "Existing live DeepSeek evidence retained: three successful requests, calculator exchange, 760 total tokens; paid calls not repeated. Thinking-enabled mode and provider failures remain fixture-only checks.",
+        "Flutter unchanged; analyze and device interaction outside this node scope."
+      ]
     }
   }
 }
