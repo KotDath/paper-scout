@@ -388,6 +388,29 @@
         "Whole-merge git diff --check and progress JSON validation passed; no tracked unit/widget tests or runtime/PDF/video artifacts added. Unit/widget tests not created or run; ephemeral ports and disposable integration databases used; logs remain ignored in .bb/runtime/t15.",
         "Product and Flutter sources unchanged; Flutter analyze, APK build and device UI not repeated during integration. Historical live Flutter/claude-in-mobile evidence and failed-attempt limitations retained in docs/verification/T16.md. T17 video and T18 final acceptance remain pending. Shared dotenv not read; no new paid calls, push or deployment."
       ]
+    },
+    "T17": {
+      "status": "done",
+      "worktree": "/home/kotdath/omp/personal/ai/paper-scout-worktrees/T17",
+      "branch": "dag/t17",
+      "threads": {
+        "executor": "thr_mp6qw4b5g8",
+        "reviewer": "thr_tvfbkih3d7",
+        "simplifier": "thr_in5pgjwinf"
+      },
+      "base_sha": "80256c1b20aeb647a7eb14c46dc76d32fc9b56b7",
+      "approved_head_sha": "0d17ede589be877f8925dc03ac7c1154b2b1e5d5",
+      "merge_sha": "33095432febd2013a2199fddca78ae7cee03a97c",
+      "checks": [
+        "Pre-merge: main clean at expected 80256c1b20aeb647a7eb14c46dc76d32fc9b56b7; base ancestor; dag/t17 and clean task worktree at approved 0d17ede589be877f8925dc03ac7c1154b2b1e5d5. Both review/fix cycles, simplification and final reviewer approval confirmed; verify.patch matches approved diff.",
+        "git merge --no-ff dag/t17 passed without conflicts; merge 33095432febd2013a2199fddca78ae7cee03a97c. Integrated tree matches approved node head. All independent worktree paths, branches and heads preserved.",
+        "go build -mod=readonly -o .bb/runtime/t17-integration/bin/ ./..., go vet -mod=readonly ./... and go mod verify passed with GOPROXY=off and existing root-local caches; dependencies unchanged.",
+        "GOPROXY=off python3 -B integration/check.py --only researchapi --only process: 2/2 PASS on merge commit; production/integration executables built with -race -mod=readonly. Real HTTP/SQLite research admission, full analysis, hybrid retrieval with installed Qwen3, ownership, cancellation, persistence and OS-process restart/recovery checked. External arXiv/DeepSeek boundaries use labeled HTTP fixtures; no paid calls.",
+        "All 12 approved T17 manifest artifact sizes/SHA-256 match in task worktree. ffprobe confirms H.264, 720x1780, 30 fps, 12428 frames, 414.266667 seconds and 15838091 bytes. Complete ffmpeg -v error -xerror decode passes without diagnostics; video SHA-256 e7aa4af10074cced77b6e9ec3fcd4564fb8782f57f4cc74704f7a48df6449c36.",
+        "bash -n scripts/record-demo.sh and four CLI refusals passed: absent arguments, invalid duration, external output path and existing output file. No device calls made by these checks.",
+        "Whole-merge git diff --check and progress JSON validation passed; no tracked unit/widget tests, runtime, PDF or video artifacts added. Unit/widget tests not created or run. Ephemeral ports and disposable integration databases used; runtime outputs remain ignored.",
+        "Product/Flutter unchanged; Flutter analyze, APK build and device UI/playback not repeated by integrator. Approved live Flutter/claude-in-mobile video and full-reading/hybrid/restart/isolation evidence retained in docs/verification/T17.md, including extraction/browser and non-repeated T15/T16 scenario limitations. Video remains ignored at the documented T17 worktree path. Shared secret dotenv not read; no paid live calls, push or deployment. T18 remains pending."
+      ]
     }
   }
 }
