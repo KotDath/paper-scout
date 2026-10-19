@@ -158,6 +158,23 @@ Findings must be concrete with file/location, severity and required fix. Commit 
             save(ledger_path, ledger)
         print(f"{node} {stage}: {thread_id}", file=sys.stderr, flush=True)
         deadline = time.monotonic() + 3600
+        failed_since = None
+
+        def await_automatic_retry():
+            # BB can restart an overloaded provider turn shortly after its error
+            # projection appears. Observe that restart; never dispatch a duplicate.
+            nonlocal failed_since
+            if failed_since is None:
+                failed_since = time.monotonic()
+            if time.monotonic() - failed_since >= 90 or time.monotonic() >= deadline:
+                return False
+            started_wait = time.monotonic()
+            subprocess.run(["bb", "thread", "wait", thread_id, "--status", "active", "--timeout", "15s", "--json"],
+                           capture_output=True, text=True, timeout=20)
+            if time.monotonic() - started_wait < 1:
+                time.sleep(1)
+            return True
+
         value = recovered
         while value is None:
             wait = subprocess.run(["bb", "thread", "wait", thread_id, "--timeout", "45s", "--json"],
@@ -167,6 +184,7 @@ Findings must be concrete with file/location, severity and required fix. Commit 
                 if value is not None:
                     break
                 if terminal_status == "running":
+                    failed_since = None
                     if time.monotonic() >= deadline:
                         raise RuntimeError(f"Stage {stage} timeout; thread kept for inspection")
                     # The BB status projection can lag the recorded request.
@@ -174,13 +192,18 @@ Findings must be concrete with file/location, severity and required fix. Commit 
                     subprocess.run(["bb", "thread", "wait", thread_id, "--status", "active", "--timeout", "45s", "--json"],
                                    capture_output=True, text=True, timeout=55)
                     continue
+                if terminal_status == "failed" and await_automatic_retry():
+                    continue
                 if terminal_status in {"interrupted", "failed", "cancelled"}:
                     raise RuntimeError(f"{stage}: provider turn {terminal_status}; no completed stage result. Worktree preserved.")
                 raise RuntimeError(f"{stage}: idle without a completed JSON result for this stage; worktree preserved.")
             info = bb("thread", "show", thread_id)
             status = info["thread"]["status"]
+            if status == "error" and await_automatic_retry():
+                continue
             if status in {"error", "stopping"}:
                 raise RuntimeError(f"{thread_id} became {status}")
+            failed_since = None
             if time.monotonic() >= deadline:
                 raise RuntimeError(f"Stage {stage} timeout; thread kept for inspection")
             print(f"{node} {stage}: waiting ({status})", file=sys.stderr, flush=True)
