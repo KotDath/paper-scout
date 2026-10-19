@@ -725,7 +725,8 @@ library/read tools либо abstention. Feedback не объявляется н�
 Исходные reports/snapshots не меняются. Это сознательно консервативно: после
 правки доступность старого prose уступает необходимости повторно проверить original.
 
-До пяти projection reports на историческую группу, до 32 related papers,
+После fix2 — до 32 dependency reports в closure/union, до 32 related papers
+на origin, пять видимых исторических групп,
 один общий 30s deadline; JSON текущих annotations/notes входит в остаток общего
 12000-rune automatic-memory cap после snapshots/alias metadata. Обязательная
 поправка не обрезается: oversized/unavailable группа удерживается целиком с

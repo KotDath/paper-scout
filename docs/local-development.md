@@ -318,12 +318,14 @@ sha256sum artifacts/new-demo-part1.mp4
 
 ### Новая полная запись T22
 
-Основной файл `artifacts/paper-scout-full-demo.mp4` (43:08,8), отдельный
-`research-memory-demo.mp4` (15:24,6). Полная версия — семь частей с явными joins: fresh A/B,
+Основной файл `artifacts/paper-scout-full-demo.mp4` (45:21,6), отдельный
+`research-memory-demo.mp4` (17:37,4). Полная версия — восемь частей с явными joins: fresh A/B,
 поздние lifecycle проверки, подписанные synthetic fallback scenes и поздний
 просмотр тех же accepted reports/originals и две fix1 same-dialogue сцены
 correction/exclusion/note edit/clear. Memory clip содержит исходный A/B excerpt
-и обе новые сцены. Go c35ea1c/1cfcc7f и неизменённый APK c3a2e2e подписаны;
+и обе fix1 сцены; последняя fix2 сцена отдельно подписана как controlled
+synthetic provider/science на production cmd/paper-scout (646f1e0), paid0.
+Go c35ea1c/1cfcc7f и неизменённый APK c3a2e2e подписаны;
 failed clear attempt сохранён перед успешным повтором. UI playback 2x, CFR30, H.264,
 720×1780, без аудио. Первые 8s setup и verification interval part2 05:00–14:30
 исключены явно; raw/failed recordings и transcode drafts сохранены.
