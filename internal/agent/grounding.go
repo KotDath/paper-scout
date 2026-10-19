@@ -427,7 +427,18 @@ func (g *grounding) validate(raw string) (string, []string, []string) {
 	d.MemoryReason, reasonOK = g.canonicalProse(d.MemoryReason, 800)
 	d.Scope, scopeOK = g.canonicalProse(d.Scope, 500)
 	if !scopeOK || !reasonOK {
-		return "", []string{"invalid_scope_or_memory_reason: bounded nonempty prose; all identifiers must resolve EXACTLY to this run, no citation markers"}, nil
+		issues := []string{"invalid_scope_or_memory_reason: bounded nonempty prose; all identifiers must resolve EXACTLY to this run, no citation markers"}
+		for _, field := range []struct{ name, text string }{{"scope", d.Scope}, {"memory_reason", d.MemoryReason}} {
+			for _, id := range proseReference.FindAllString(field.text, -1) {
+				if _, ok := g.canonicalProse(id, 800); !ok {
+					issues = append(issues, "unissued_prose_reference:"+field.name+":"+safeRef(id)+"; remove this identifier and describe historical feedback/state in plain words; history metadata does not issue references")
+					if len(issues) == 5 {
+						return "", issues, nil
+					}
+				}
+			}
+		}
+		return "", issues, nil
 	}
 	issues := []string{}
 	missing := []string{}

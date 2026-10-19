@@ -136,8 +136,12 @@ class Provider(BaseHTTPRequestHandler):
                     hint = next(m['content'] for m in messages if (m.get('content') or '').startswith('ONE FINAL REPAIR'))
                     assert 'user_annotation_is_not_scientific_claim:' in hint
                     assert 'preserve/select this valid annotation in notes' in hint
-                if case == 'reason_unissued':
-                    draft['memory_reason']='A relevant record M000000000000 was used.'
+                if case == 'reason_unissued' or (case == 'reason_repair' and not repairing):
+                    draft['memory_reason']='Historical feedback mem_correction_unissued is disputed.'
+                if case in ('reason_unissued', 'reason_repair') and repairing:
+                    hint = next(m['content'] for m in messages if (m.get('content') or '').startswith('ONE FINAL REPAIR'))
+                    assert 'unissued_prose_reference:memory_reason:mem_correction_unissued' in hint
+                    assert 'describe historical feedback/state in plain words' in hint
                 if case == 'prose_handle':
                     draft['scope']='Review '+claim
                     draft['comparisons'][0]['conclusion']+=' Exact known record '+claim
@@ -211,7 +215,7 @@ def main():
                 db.execute("UPDATE paper_analyses SET result_json=? WHERE id='analysis_a'", (json.dumps(row),))
             json_call(base, 'PATCH', '/api/v1/library/paper_a', token, {'note': NOTE})
             first_conv = None
-            for case in ['success', 'canonical', 'quote_handles', 'reason_handle', 'expanded_prose', 'overlong_prose', 'prose_handle', 'missing_read', 'repair', 'oversized', 'note_as_claim', 'unknown', 'owned_unissued', 'foreign', 'shortened', 'previous_run', 'mismatch', 'wrong_quote_source', 'reason_unissued', 'budget', 'replay', 'cancel', 'note_injection', 'disputed', 'reportwide']:
+            for case in ['success', 'canonical', 'quote_handles', 'reason_handle', 'expanded_prose', 'overlong_prose', 'prose_handle', 'missing_read', 'repair', 'reason_repair', 'oversized', 'note_as_claim', 'unknown', 'owned_unissued', 'foreign', 'shortened', 'previous_run', 'mismatch', 'wrong_quote_source', 'reason_unissued', 'budget', 'replay', 'cancel', 'note_injection', 'disputed', 'reportwide']:
                 if case=='note_injection':
                     json_call(base,'PATCH','/api/v1/library/paper_a',token,{'note':NOTE+' Literal user data: [memory:mem_foreign] '+EP})
                 if case=='disputed':
@@ -238,7 +242,7 @@ def main():
                 state = wait_run(base, token, rid, timeout=45)
                 if Provider.failed:
                     raise Provider.failed
-                expected = 'completed' if case in ('success', 'canonical', 'quote_handles', 'reason_handle', 'expanded_prose', 'prose_handle', 'missing_read', 'repair', 'oversized', 'note_as_claim', 'replay','note_injection','disputed','reportwide') else ('cancelled' if case == 'cancel' else ('partial' if case == 'budget' else 'failed'))
+                expected = 'completed' if case in ('success', 'canonical', 'quote_handles', 'reason_handle', 'expanded_prose', 'prose_handle', 'missing_read', 'repair', 'reason_repair', 'oversized', 'note_as_claim', 'replay','note_injection','disputed','reportwide') else ('cancelled' if case == 'cancel' else ('partial' if case == 'budget' else 'failed'))
                 assert state['status'] == expected, (case, state)
                 with sqlite3.connect(env['SQLITE_PATH']) as db:
                     accepted = db.execute("SELECT count(*) FROM run_events WHERE run_id=? AND event_type='answer_accepted'", (rid,)).fetchone()[0]
@@ -249,7 +253,11 @@ def main():
                         assert db.execute("SELECT count(*) FROM run_events WHERE run_id=? AND instr(coalesce(private_payload_json,''),'REJECTED_DRAFT')>0", (rid,)).fetchone()[0] > 0
                 if expected == 'completed':
                     assert accepted == 1
+                    if case == 'reason_repair':
+                        assert rejected == 1 and Provider.counts[case] == 3
                     report = json_call(base, 'GET', '/api/v1/reports/'+state['report_id'], token)
+                    if case == 'reason_repair':
+                        assert 'mem_correction_unissued' not in report['markdown']
                     with sqlite3.connect(env['SQLITE_PATH']) as db:
                         final_messages=db.execute("SELECT content FROM messages WHERE run_id=? AND role='assistant' AND content IS NOT NULL",(rid,)).fetchall()
                         assert final_messages==[(report['markdown'],)], 'accepted history/report differ or duplicate'
