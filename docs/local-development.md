@@ -2,7 +2,8 @@
 
 Команды выполняются из корня **текущей worktree**, для T22 —
 `/home/kotdath/omp/personal/ai/paper-scout-worktrees/T22`, ветка `dag/t22`.
-Текущая попытка production live приёмки **blocked**: [T22](verification/T22.md).
+Production live implement-приёмка T22 пройдена; review/fix/simplify выполняет
+координатор: [T22](verification/T22.md).
 Историческая сдача: [T18](verification/T18.md).
 `make` targets в проекте отсутствуют; ниже используются существующие entrypoints.
 
@@ -197,7 +198,8 @@ Go и приложение; запустите Go с **той же** SQLite/cach
 Проверьте порядок `memory_recalled` перед `model_request_started`, method/result/
 limitation cards, точный note snapshot, ссылки текущего run и original passages
 обеих работ. Recalled не доказывает referenced/использование; три утверждения
-нужно сверить вручную. В T22 первый ответ этот критерий **не прошёл**.
+нужно сверить вручную. В T22 исправленный основной проход прошёл; прежние
+failed attempts сохранены отдельно, а не переписаны.
 
 Для memory-off контроля сделайте SQLite backup в отдельный локальный каталог,
 назначьте ему свой cache и порт 0, затем запустите тот же production executable
@@ -302,3 +304,28 @@ sha256sum artifacts/new-demo-part1.mp4
 `artifacts/retrieval-evaluation.json`; сверьте SHA-256 по [T18](verification/T18.md).
 Эти ignored файлы не появятся в новом clone сами. В Git остаются код, runbook
 и sanitized verification; видео/PDF/credentials/БД туда не добавлять.
+
+### Новая полная запись T22
+
+Основной файл `artifacts/paper-scout-full-demo.mp4` (34:14,2), отдельный
+`research-memory-demo.mp4` (6:30). Это пять частей с явными joins: fresh A/B,
+поздние lifecycle проверки, подписанные synthetic fallback scenes и поздний
+просмотр тех же accepted reports/originals. UI playback 2x, CFR30, H.264,
+720×1780, без аудио. Первые 8s setup и verification interval part2 05:00–14:30
+исключены явно; raw/failed recordings и transcode drafts сохранены.
+
+Все Android UI-действия — claude-in-mobile. `scripts/record-demo.sh DEVICE
+artifacts/clip.mp4 0` только пишет display, проверяет рост и finally-stop своего
+recorder; запускать лишь при поддержке unlimited recording устройством.
+Для воспроизведения delay/fallback не выключать общую Ollama: использовать
+`integration/flutter_memory --runtime <new T22 temp dir> --ui --video-fallbacks`;
+это synthetic science/snapshot fixture, не основной research entrypoint.
+`SCOUT_VIDEO_FAULT_FILE` может содержать только `memory_pending` или
+`memory_unavailable`, сохраняя настоящие auth/ownership checks.
+
+Финальные MP4 проверять `ffprobe` и полным `ffmpeg -v error -xerror -i <MP4>
+-f null -`, затем визуально начало/конец и все сцены. Для native VFR сначала
+нормализовать timestamps/fps, затем trim и setpts/2; не полагаться на input-seek
+при длинных статических кадрах. [Матрица](acceptance-and-demo.md#t22--полный-production-walkthrough),
+[хеши/расход/границы](verification/T22.md). В Git только sanitized verification,
+без видео/кэша/PDF/DB/secrets/private provider data.

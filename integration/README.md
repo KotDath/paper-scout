@@ -3,9 +3,9 @@
 T22 production final-answer contract проверяется отдельно:
 `python3 -B integration/grounding.py`. Это production cmd/paper-scout → настоящий
 HTTP/auth/SQLite/Qwen3; source/provider — явно synthetic fixtures, paid calls=0.
-20 сценариев проверяют exact E/M/Q handles и canonical IDs, primary reads A/B,
+26 сценариев проверяют exact E/M/Q handles и canonical IDs, primary reads A/B,
 один repair/повторную ошибку, budgets/cancel, owner scope, ошибочный old claim с
-валидным ev ID, disputed correction, literal user note injection, приватный
+валидным ev ID, direct/report-level disputed correction, literal user note injection, приватный
 draft audit и атомарную canonical history/report публикацию. Unit tests нет.
 Старые production assertions `agentmemory.py`, допускающие completed с invalid
 ссылками, заменены новым строгим контрактом; historical T20 результаты остаются

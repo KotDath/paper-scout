@@ -108,44 +108,63 @@ reasoning и PDF в сдачу Git не включаются.
 
 T01–T18 закрывают предыдущую сдачу дня35. Новое требование пользователя — другой диалог после рестарта, автоматическое воспоминание исследования A и заметки, осмысленное сравнение с B и проверяемые ссылки. Предыдущее видео этого не доказывает. Критерии T22 и отдельный research-memory-demo.mp4 — в [плане](research-memory.md#приёмка--t22).
 
-## T22 — новая production попытка, приёмка blocked
+## T22 — полный production walkthrough
 
-2026-10-18/19: обычный `cmd/paper-scout`, новая БД, Flutter на эмуляторе,
-claude-in-mobile, настоящие DeepSeek/arXiv/Qwen3. Новая основная ссылка —
-[paper-scout-full-demo.mp4](../artifacts/paper-scout-full-demo.mp4), 6:46,
-720×1780/30 fps, H.264, без аудио. Непрерывная запись ускорена 2x, скорость
-и `Acceptance BLOCKED` подписаны постоянно. Это **попытка walkthrough**, а не
-видео всех принятых функций. [research-memory-demo.mp4](../artifacts/research-memory-demo.mp4)
-— отдельный memory excerpt 4:44, 720×1740, из того же raw без внутренних cuts.
-Старое видео не перезаписывалось. Хеши/команды/расход: [T22](verification/T22.md).
+Implement-приёмка выполнена 2026-10-19; review/fix/simplify/final verify остаются
+отдельными этапами координатора. Основной [paper-scout-full-demo.mp4](../artifacts/paper-scout-full-demo.mp4)
+— **34:14,2**, отдельный [research-memory-demo.mp4](../artifacts/research-memory-demo.mp4)
+— **6:30**. H.264, 720×1780, CFR30, без аудио; UI playback **2x**.
+Это **пять записанных частей с явными joins**, не непрерывная capture.
+Части 1/2 — реальные production исследования/lifecycle, 3 — подписанные
+synthetic fallback fixtures, 4 — просмотр тех же reports/originals, 5 — latest
+APK с фактическим usage существующего A без paid replay. Первые 8s launcher
+setup и verification interval part2 05:00–14:30 убраны явно; raw сохранены.
+В пропущенном интервале повторно открывался уже готовый отчёт: outcome и текст
+показаны по обе стороны, неудача не заменена успехом. Основной A/B снят на
+d64b9ab; последующие contract fixes проверены адресно/live, UI usage — c3a2e2e.
 
-Таймкоды ниже ориентировочные, относятся к **full** версии 2x. Supporting
-artifacts — ignored локальные файлы T22; их отсутствие в clone не означает
-наличие видео или пройденную приёмку. Contact sheet подтверждает расположение
-сцен; интеграционный лог не выдаётся за кадр.
+Ниже **таймкоды full-версии**, сверенные с кадрами. Небольшие интервалы включают
+навигацию/ожидание. Supporting artifacts — ignored локальные файлы; один лог
+не засчитывается как video scene. Полные hashes/расход/научные границы:
+[verification/T22.md](verification/T22.md). Старые blocked/failed записи и
+прежний day35-demo сохранены; [архив попыток](verification/T22-attempt-history.md).
 
-| Функция → действие | Ожидаемое доказательство | Сцена / факт | Supporting artifact |
+| Функция → действие | Ожидаемое доказательство / фактическая сцена | Таймкод full | Supporting artifact |
 | --- | --- | --- | --- |
-| Адрес API, неверный вход, вход, профиль | Понятная ошибка и сохранённые интересы | Показано 0:00–0:45 | full MP4, `t22-contact.png` |
-| Новый A, настоящий поиск/анализ/прогресс | arXiv и завершённый отчёт/coverage | Показано 0:45–1:28; complete 39757/39757 | full MP4, `t22-public-evidence.json` |
-| Saved/read и личная note | Явное сохранение и пользовательское происхождение | Показано 1:28–1:56 | full MP4, public library |
-| Go/Flutter restart, история/библиотека/профиль | Данные пережили рестарт | UI 1:56–2:35; Go restart — отдельный process log | full MP4, `.bb/runtime/t22/final-server.log` |
-| Новый диалог B без A в вопросе | Автоматическая связь с прежним исследованием | Новый диалог/вопрос/прогресс 2:35–3:20; automatic recall подтверждён seq3 перед seq4 | full MP4, `t22-http-checks.json` |
-| Самопроизвольное проверенное сравнение A/B и note | Полные ссылки и original passages обеих работ | **FAIL** первого B: citations=0, shortened note marker, A не прочитан. Текст в основном виден в collapsed preview; законченная сцена сравнения не заявляется | `t22-public-evidence.json`, report B |
-| Уточнение с hybrid retrieval | BM25+dense+RRF и исходные citations | Follow-up 3:25–3:50; 8 citations, но одна unresolved memory-ссылка | full MP4, follow-up report |
-| Recalled/referenced и provenance, старый отчёт | Разные секции и переходы | Показано 3:50–4:40; открытие A и его evidence | full MP4, memory API |
-| Full text vs index vs reading | Координаты/предупреждения/coverage, не взаимозаменяемые статусы | Source/index видны около 1:30, coverage 1:20/3:05; original A 4:10–4:25, B 5:50–6:10 | full MP4, original public evidence |
-| Correction / disputed / revision / exclude / restore | Актуальная аннотация рядом с immutable A | Показано 4:40–5:20; revision 1→4. Эффект на будущий **ответ** не проверен | full MP4, `t22-rebuild-check.json` |
-| Библиотечный поиск | Настоящие BM25/dense/RRF ranks | Показано 5:35–5:50; 81/81, кандидаты 20/20 | full MP4, live HTTP |
-| 401, смена аккаунта, logout | Удаление сессии, отдельные данные B | Показано 6:10–6:46. 401 — явная server session-expiry fixture, не outage провайдера | full MP4, `t22-http-checks.json` |
-| NOOP, correction/exclusion, note edit/clear после rebuild/restart | Состояние не воскресло, snapshots неизменны | HTTP/direct Service/OS проверки PASS, **не показано на видео** | `t22-note-lifecycle.json`, `t22-rebuild-check.json` |
-| Memory on/off контроль | Тот же B, новый диалог без A/note при off | Один live off run PASS, **не показан** | `t22-memory-off-control.json` |
-| Старый отчёт во время активного follow-up, cancellation | Просмотр/отмена без потери результата | **Не показано** в T22 | Только synthetic integration/agentmemory; не video credit |
-| Partial/abstract-only, pending/unavailable/lexical-only, сеть | Реальные подписи ограничений | **Не показано** в T22; extraction warning и 401 не заменяют эти состояния | Исторические fixtures T15/T19–T21, не новая video acceptance |
+| Адрес API, неверный вход, вход, профиль | Настройка loopback origin, понятная ошибка неверного пароля, вход/интересы | 00:04–01:15 | full MP4, final contact0, public profile/history |
+| Новый A, arXiv search/import/analysis/progress | Вопрос MemoryBank, реальные source/tool events, готовый отчёт; actual original query `ti:MemoryBank` раскрыт повторно в latest APK | 01:00–02:10; 34:08–34:14 | primary raw, usage raw, run A/public audit |
+| Report, usage и coverage | Complete39757/39757; **8 requests / 43366 tokens / 4 tools** показаны UI на неизменённом A, не inferred cost | 01:35–02:10; 33:52–34:02 | full MP4, usage raw, run A.usage |
+| Saved/read и личная note | Оба switches и точная содержательная note, server save | 02:15–02:30 | primary raw, primary-public library |
+| Go/Flutter restart, сохранение истории/библиотеки/профиля | OS restart, повторный вход; сервер использует ту же DB | 02:25–03:20 | primary raw + process log; повторно 23:30–24:25 |
+| Новый диалог B без A в question | Вопрос только MemGPT, автоматический recall A+note до model request; fresh complete52333/52333 | 03:00–04:20 | primary raw, report B, event seq3<4 / 27<28 |
+| Scientific A/B contrast и note | Положительный контраст S/t updating vs queue eviction/recall storage, original excerpts; note применена к MSC5+1/personas/unknown duration | 04:20–06:05 | primary raw, primary-public evidence; broad absence claim не засчитан |
+| Recalled/referenced, origin A, старый отчёт | Раздельные секции/typed cards, переход к A, report provenance; точная note в историческом snapshot после clear не объявляется текущей | 04:20–05:15; 32:00–32:58 | full MP4, memory API; последний просмотр тех же accepted reports |
+| Полное чтение ≠ index ≠ retrieval | Extraction warning, coverage, document/index counts и coordinates отдельны; exact A excerpt13799–15297 и B queue8983–10724 / MSC18036–19010 | 01:35–02:10; 06:10–06:35; 07:04; 32:55; 33:10 | primary/provenance raw, public evidence |
+| Переход к оригиналу | A abs page показана в основной части; HTML B первый раз blank body (gap сохранён), позднее arXiv abs B отрисован с title/authors/abstract | 02:00; 06:30–06:45; **33:17–33:21** | full MP4, provenance raw; URL2310.08560v2 |
+| Настоящий библиотечный hybrid search | BM25+dense+RRF, индекс81/81, candidates20/20, ranks/scores, переход к MSC original | **06:59–07:06** | primary raw; real Ollama/SQLite HTTP retrieval |
+| Настоящий same-dialogue follow-up | Existing sources, original queue thresholds, citations, без нового full analysis | 07:50–09:30 | primary raw, run_2XTL.../report |
+| Negative recall | Вулканы нерелевантны: recalled3/referenced0, нет выдуманного сравнения/scientific facts | 09:40–10:30 | primary raw, negative live report |
+| Semantic fault → original counterexample | Явно внедрён только derived wrong100years/real-users claim с valid ev; live original disproves it **до** user correction | 10:55–13:35 | primary raw, semantic-fault-setup, real fault review |
+| Correction/disputed/provenance/revision/exclude/restore | User feedback требует проверки, не сообщает правильные числа; disputed rev2 → exclude3 → restore4; позже exclude5 | 13:15–14:40; 22:00–23:15 | primary/lifecycle raw, current Entry/API |
+| Ответ после correction и edited note | Новая live question; original10days/15virtual; not_supported, correction/note2 дословно; inventory overclaim сохранён как limitation, catalog scope исправлен | 17:35–19:55; 20:15–21:55 | lifecycle raw, post-correction report |
+| Note clear/rebuild/restart и новый ответ | UI edit2/clear, сохранённое exclusion5, OS restart, библиотека без note; следующий live run не получает старую note/fault | 18:00–18:25; 23:00–25:25 | lifecycle raw; verified-rebuild/post-rebuild-search/after-clear |
+| Старый отчёт во время active follow-up, cancel/continue | **Локальный provider-delay fixture**, zero upstream; старый real report доступен; первый failed attempt сохранён, второй cancelled, input снова доступен | 25:35–27:58 | lifecycle raw, controlled-cancel-check; реальные status/report ownership |
+| 401 и второй аккаунт | Явный disposable session-expiry fixture → настоящий401/logout; Bob: пустые история/библиотека/профиль, отдельная память | 28:00–28:33 | lifecycle raw; Bob empty both branches + foreign404 API audit |
+| Abstract-only и partial | **Подписанные synthetic UI fixtures**, onlyabstract84/84 не fulltext; partial42/84 | 28:52–29:25 | fallback raw, fixture reports/documents |
+| Pending/unavailable memory | Подписанные fixture reports, состояния не трактуются как отсутствие истории | 29:35–30:00 | fallback raw, HTTP fixture reasons |
+| Lexical-only/hybrid-partial | Реальные UI подписи «dense недоступен» / «неполный индекс»; общая Ollama не выключалась | 30:03–30:24 | fallback raw, explicitly synthetic snapshots |
+| Detail pending/unavailable/retry | Русские ошибки памяти; после снятия local fault повторная загрузка открывает actual entry | 30:33–30:48 | fallback raw, auth/owner checks остаются настоящими |
+| Stale revision409/reload | Настоящее конкурентное PATCH fixture изменило revision; stale UI получает409, reload показываетrev2 | 30:49–31:00 | fallback raw, real SQLite/PATCH |
+| Сеть и восстановление | Закрытый ephemeral local endpoint → понятная ошибка; восстановлен origin и вход в actual production | 31:12–31:43 | fallback raw, основной сервер не подменял scientific ответы |
+| NOOP/rebuild bytes / memory-off control | Backend checks PASS, **не выдаются за отдельную UI-функцию/сцену**: NOOP1, immutable hashes, same B off snapshots0/null | UI state lifecycle выше; direct/HTTP checks отдельно | verified-rebuild, verified-memory-off, note-only guard |
 
-Остаются обязательными успешный первый B с проверенными A/B citations,
-исправление semantic ошибок/искажения note, negative recall и намеренно
-неверный старый claim с валидным evidence, ответ после correction, полная новая
-запись недостающих сцен. Completed run, наличие generated cards или старое
-видео не закрывают эти пункты. Статус **blocked**, подробности и конкретные
-required fixes — [verification/T22.md](verification/T22.md).
+Все UI-взаимодействия — claude-in-mobile. adb использовался только для
+install/reverse/record/transfer. Проверены рост и finally-stop каждого recorder,
+ffprobe, полное декодирование обоих конечных файлов, начало/конец и все ключевые
+сцены. Raw/keyframes/contact sheets/manifest сохранены; private reasoning,
+секретные dotenv и загруженные PDF не входят в Git.
+
+Приёмка не обещает универсальную научную истинность prose или benchmark
+качества. Засчитаны три сверенных source facts и узкое сравнение; неоднозначная
+фраза «без модели забывания» не засчитана как отсутствие других механизмов.
+Старые ошибки/затраты не удалены и не выданы за успешные результаты.

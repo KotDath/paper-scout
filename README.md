@@ -8,13 +8,15 @@ AI участвует во всём исследовании: DeepSeek Chat Comp
 
 ## Видео и доказательства
 
-**Новая приёмка памяти T22 заблокирована.** Production `cmd/paper-scout` с
-реальными arXiv/DeepSeek/Qwen3 и Flutter проверен. Исправлено вытеснение научного
-origin заметкой при recall. Новый [production walkthrough](artifacts/paper-scout-full-demo.mp4)
-и [фрагмент памяти](artifacts/research-memory-demo.mp4) сохраняют неуспешный
-ответ B и имеют постоянную пометку `Acceptance BLOCKED`. Это запись попытки,
-а не подтверждение всех функций. Результаты, расход, непоказанные сцены и
-необходимые исправления: [T22](docs/verification/T22.md).
+**Новая production приёмка T22 выполнена на этапе implement.**
+[Полный walkthrough](artifacts/paper-scout-full-demo.mp4) — **34:14,2**;
+[отдельный ролик памяти](artifacts/research-memory-demo.mp4) — **6:30**.
+Пять явно соединённых частей, UI playback 2x, 720×1780/30 fps, без аудио.
+Основной A → note → OS restart → **новый диалог B** использует настоящие
+arXiv/DeepSeek/Qwen3; контролируемые fallback-сцены подписаны отдельно.
+Старые failed recordings сохранены. Проверки, расходы, ограничения и хеши:
+[T22](docs/verification/T22.md); [матрица сцен](docs/acceptance-and-demo.md#t22--полный-production-walkthrough).
+Два review/fix цикла, simplify и итоговый контроль выполняет координатор.
 
 [Смотреть видео с эмулятора](artifacts/day35-demo.mp4) — **6:54**, H.264, 720×1780, без звука, с титрами. Весь проход ускорен в 1,5 раза; это обозначено на экране. Поиск и ответы реальные. Видео и JSON лежат локально в ignored `artifacts/`, в Git не включены и не опубликованы. В чистом clone их нужно перенести с этой машины и сверить хеши из [T18](docs/verification/T18.md).
 
@@ -62,10 +64,11 @@ origin заметкой при recall. Новый [production walkthrough](artif
 T19–T21 реализуют typed method/result/limitation cards с provenance, ADD/NOOP,
 версии заметок, corrections/exclusion, BM25+Qwen3+RRF, автоматический recall
 до первого запроса и после анализа, отдельные recalled/referenced в Flutter.
-В T22 подтверждены реальные capture, новый диалог после рестарта, note recall,
-изоляция и memory-off контроль. **Новая продуктовая приёмка не закрыта:** первый
-ответ B сократил citation IDs и не прочитал первоисточник A перед сравнением;
-исправляющий follow-up также оставил одну невыданную этому run memory-ссылку.
+В T22 подтверждены capture/NOOP, новый диалог после рестарта, проверенные
+original reads A/B и дословная пользовательская note, semantic counterexample,
+correction/exclusion, note edit/clear/rebuild/restart, negative recall, изоляция
+и live memory-off контроль. Production final gate проверяет scoped references
+и exact excerpts до report commit; это не полная семантическая верификация.
 [Исследование подходов](docs/memory-approaches.md), [контракт](docs/research-memory.md),
-[точные ограничения и видео](docs/verification/T22.md). Прежняя сдача T18
-не доказывает новый сценарий.
+[результаты и ограничения](docs/verification/T22.md). Прежняя сдача T18
+остаётся отдельным историческим результатом.

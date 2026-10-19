@@ -1,13 +1,14 @@
 # Память между исследованиями
 
 Статус: T19–T21 реализуют хранилище, capture/consolidation, hybrid search,
-automatic recall в production и Flutter. T22 проверил обычный cmd/paper-scout
-с реальными источниками/DeepSeek/Ollama и записал новую попытку. **Приёмка
-blocked:** первый ответ B не проверил A и сократил citations. Исправление
-вытеснения scientific origin заметкой и результаты: [T22](verification/T22.md).
-Пользователь попросил сначала изучить подходы долговременной памяти; выбор обоснован в
-[memory-approaches.md](memory-approaches.md). Полный пользовательский сценарий ещё не прошёл приёмку.
-Прежняя сдача дня 35 остаётся историческим результатом.
+automatic recall в production и Flutter. T22 завершил implement-приёмку с
+реальными arXiv/DeepSeek/Ollama: A → note → OS restart → новый диалог B,
+проверенные primary reads и дословная note; lifecycle, semantic correction,
+negative recall, isolation и отдельный memory-off control. Полное новое видео
+и точные ограничения: [T22](verification/T22.md). Ревью/упрощение/итоговый контроль
+координатора ещё следуют; это не merged/done DAG.
+Выбор подхода обоснован в [memory-approaches.md](memory-approaches.md).
+Прежняя сдача дня35 и failed T22 recordings сохранены отдельно.
 
 Уточнение отбора T22: если лучший hit paper-group — user_note, сначала
 пробуется лучший scientific claim того же paper из текущего owner-filtered
@@ -635,7 +636,9 @@ memory-off. Legacy composed callers без этой опции сохраняю�
 сокращения/prefix/fuzzy expansion, чужие и старые handles не поддерживаются.
 Manifest не равен всей библиотеке: новые источники можно найти обычными tools.
 Он также содержит каталог до 20 owner-scoped названий/paper IDs с явным
-`library_catalog_limited`; это навигационные metadata, не новые evidence.
+`library_catalog_limited=true` (всегда scoped), отдельными
+`library_catalog_truncated`/`library_catalog_scope`; это navigation metadata,
+не inventory и не новые evidence. Memory-derived catalog учитывается в memory cap.
 
 У успешно прочитанного passage есть до шести `quote_options`: `Q` scoped handle,
 Unicode полуинтервал относительно passage и **неизменённый** slice текста до
@@ -669,7 +672,7 @@ Notes выбираются по выданным M-handles и выводятся
 отдельно от научных выводов. Релевантные критерии заметки применяются к
 проверке научных данных (нужные attributes подтверждены/не установлены),
 а не только отображаются; предпочтение не усиливается до real-only. Correction closure materially used claim/note
-обязательна; это feedback, а не доказанная истина. Typed selections определяют
+обязательна, включая доставленный feedback на origin report episode; это feedback, а не доказанная истина. Typed selections определяют
 canonical report citations/referenced; текст пользовательской note не может
 создать научную ссылку. Известные issued identifiers в текстовых полях
 нормализуются точно как plain canonical IDs и сами по себе не считаются
