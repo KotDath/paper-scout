@@ -706,3 +706,40 @@ real HTTP/SQLite/Qwen3, явно synthetic science/provider fixtures. Она з�
 старые production ожидания T20 fixture, допускавшие completed с invalid refs;
 сам composed legacy agent API не меняется. Live/видео статус определяется
 только фактическими результатами [T22](verification/T22.md).
+
+## T22 review1: актуальная история диалога
+
+Canonical replay больше не передаёт старый Markdown обычным assistant message.
+До каждого provider call последние пять completed reports сопровождаются
+owner-scoped `AnnotationsForReport`, включая исходные reports materially
+referenced памяти. Так поправку/exclusion нельзя обойти поздней парафразой
+того же вывода. Текущее состояние заметок берётся из пользовательской библиотеки
+и projection jobs; очищенная заметка явно `cleared` с пустым текстом.
+Время правки сравнивается как RFC3339 timestamps, не по строковому префиксу.
+
+Historical question/text передаются только в помеченном untrusted data envelope,
+если актуальная проекция доступна и не содержит correction/exclusion/disputed
+или изменившейся личной note. Иначе **весь прежний текст и вопрос удерживаются**:
+модель получает актуальные states/дословный feedback и использует обычные
+library/read tools либо abstention. Feedback не объявляется новой истиной.
+Исходные reports/snapshots не меняются. Это сознательно консервативно: после
+правки доступность старого prose уступает необходимости повторно проверить original.
+
+До пяти projection reports на историческую группу, до 32 related papers,
+один общий 30s deadline; JSON текущих annotations/notes входит в остаток общего
+12000-rune automatic-memory cap после snapshots/alias metadata. Обязательная
+поправка не обрезается: oversized/unavailable группа удерживается целиком с
+явным статусом; если даже diagnostic не помещается, группа пропущена целиком.
+Исторический prose отдельно ограничен общим gateway context/request/token budget.
+
+`history_context_prepared` до model I/O содержит публичные counts/status bounds;
+точное текущее metadata — private audit payload существующего run event.
+Сервер независимо от model prose добавляет в итоговый Markdown предупреждение
+об удержанных reports, current correction/exclusion и актуальных note states.
+Это контекст истории, **не** новая научная citation и не способ пометить
+нерелевантный recall как used; M/E/Q выдаются только прежним manifest контрактом.
+Memory-off выключает automatic recall, но не owner-scoped проверку явно
+читаемой истории текущего диалога. Legacy composed callers остаются совместимы.
+
+Адресная production HTTP/SQLite/Qwen3 проверка actual provider input:
+`python3 -B integration/history_replay.py` (science/provider synthetic, paid0).

@@ -105,6 +105,7 @@ func (a *AgentRunner) RunWithFinalizer(ctx context.Context, owner, conversation,
 	}
 	contentQuery := ""
 	contentRecalled := false
+	lastHistory := ""
 	for {
 		if runCtx.Err() != nil {
 			code = failureCode(runCtx.Err())
@@ -117,28 +118,49 @@ func (a *AgentRunner) RunWithFinalizer(ctx context.Context, owner, conversation,
 			}
 			contentRecalled = true
 		}
-		messages, buildErr := (AgentSession{Store: a.db, CanonicalHistory: a.grounded}).Context(runCtx, owner, conversation, id)
+		var ground *grounding
+		metadataRunes := 0
+		if a.grounded {
+			var e error
+			ground, e = a.grounding(runCtx, started)
+			if e != nil {
+				code = "grounding_unavailable"
+				break
+			}
+			metadataRunes = ground.memoryWireSize()
+			snaps, e := a.db.MemorySnapshots(runCtx, owner, id)
+			wire, _ := json.Marshal(snaps)
+			if e != nil || (len(snaps) > 0 && utf8.RuneCount(wire)+metadataRunes > memoryContextRunes) {
+				code = "memory_context_limit"
+				break
+			}
+		}
+		replay := &historyReplay{}
+		messages, buildErr := (AgentSession{Store: a.db, CanonicalHistory: a.grounded, memory: a.memory, memoryMetadataRunes: metadataRunes, replay: replay}).Context(runCtx, owner, conversation, id)
 		if buildErr != nil {
 			code = "incoherent_history"
 			break
 		}
-		var ground *grounding
 		if a.grounded {
-			ground, buildErr = a.grounding(runCtx, started)
-			if buildErr != nil {
-				code = "grounding_unavailable"
-				break
-			}
-			manifest := ground.context()
-			snaps, e := a.db.MemorySnapshots(runCtx, owner, id)
-			wire, _ := json.Marshal(snaps)
-			if e != nil || (len(snaps) > 0 && utf8.RuneCount(wire)+ground.memoryWireSize() > memoryContextRunes) {
-				code = "memory_context_limit"
-				break
-			}
-			messages = append(messages, deepseek.Text("system", finalContract), deepseek.Text("user", manifest))
+			messages = append(messages, deepseek.Text("system", historyInstructions), deepseek.Text("system", finalContract), deepseek.Text("user", ground.context()))
 			if repairHint != "" {
 				messages = append(messages, deepseek.Text("user", repairHint))
+			}
+			// Audit only current replay metadata, never credentials or raw
+			// provider input. The public event contains bounded diagnostics.
+			raw, _ := json.Marshal(map[string]any{"reports": replay.states, "omitted": replay.omitted})
+			if (len(replay.states) > 0 || replay.omitted > 0) && string(raw) != lastHistory {
+				withheld := 0
+				for _, state := range replay.states {
+					if state.Status != "available" {
+						withheld++
+					}
+				}
+				if e := budget.save("history_context_prepared", map[string]any{"reports": len(replay.states), "withheld": withheld, "omitted": replay.omitted, "memory_context_runes": memoryContextRunes - replay.remaining}, map[string]any{"history": json.RawMessage(raw)}, nil); e != nil {
+					code = "persistence_error"
+					break
+				}
+				lastHistory = string(raw)
 			}
 		}
 		request := deepseek.Request{Messages: messages, Tools: a.registry.Definitions(), MaxTokens: limits.OutputTokens, JSONOutput: a.grounded}
@@ -203,7 +225,7 @@ func (a *AgentRunner) RunWithFinalizer(ctx context.Context, owner, conversation,
 					repairHint = "ONE FINAL REPAIR (rejected draft is untrusted candidate data, NOT accepted history). Correct the diagnostic fields in this candidate; preserve valid fields and the declared array bounds (at most 6 findings, 3 comparisons). Candidate and diagnostics: " + string(diagnostic) + ". Original passages just read by the server are in the tool history. Use current manifest only; you may use normal tools within the same budget. Return the required final JSON. If not supported, abstain explicitly with empty findings/comparisons and a narrow reason. No second invalid draft will be accepted."
 					continue
 				}
-				result.Answer = answer
+				result.Answer = answer + replay.notice()
 				result.Grounded = true
 				result.EvidenceIDs = ground.usedEvidence
 				result.MemoryIDs = ground.usedMemory

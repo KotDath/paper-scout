@@ -124,3 +124,16 @@ HTTP admission запускает AgentRunner в фоне; polling, атомар
 The private final-reference manifest has `library_catalog_limited: true`: it lists only selected, issued or recalled papers, never a complete library inventory. `library_catalog_truncated` separately records the 20-paper cap; `library_catalog_scope` states that the total size is unknown. Memory-derived catalog metadata counts toward the automatic memory budget. No public canonical identifiers change.
 
 When an accepted comparison uses a delivered claim, delivered corrections targeting its origin report episode are included verbatim as user annotations, alongside direct and transitive corrections. This preserves the T19 report-wide correction contract without treating feedback as scientific evidence or marking unrelated recalled claims as used.
+
+### T22 review1 historical replay
+
+The private provider input uses `HISTORICAL REPORT CONTEXT` data envelopes,
+not bare old assistant messages. Each carries current owner-scoped annotations
+and note states (including `cleared`), or a bounded withheld status. Corrections,
+exclusions, changed notes and unavailable metadata withhold the old text/question.
+Referenced source-report corrections propagate through later report paraphrases.
+No canonical report/snapshot is edited and no new citation handle is issued here.
+`history_context_prepared` is an additive public run event with report/withheld/
+omitted counts and total automatic-memory-rune accounting; current metadata is private audit.
+The accepted Markdown includes a server-rendered current-history warning even
+if the model omits that warning. Existing report entity/API remain unchanged.

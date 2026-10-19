@@ -72,9 +72,10 @@ class Provider(BaseHTTPRequestHandler):
             if case == 'replay':
                 assert not any('REJECTED_DRAFT' in (m.get('content') or '') for m in messages
                                if not (m.get('content') or '').startswith('ONE FINAL REPAIR'))
-                old_assistant = [m for m in messages if m.get('role') == 'assistant' and m.get('content')]
-                assert old_assistant and all('[memory:mem_' in m['content'] for m in old_assistant)
-                assert all(self.old_evidence not in (m.get('content') or '') for m in old_assistant)
+                old_context = [m for m in messages if (m.get('content') or '').startswith('HISTORICAL REPORT CONTEXT')]
+                assert old_context and all(m['role']=='user' for m in old_context)
+                assert not any(self.old_evidence in m['content'] for m in old_context)
+                assert all(not (m.get('content') or '').startswith('## Вопрос пользователя') for m in messages if m['role']=='assistant')
             if n == 1:
                 # EN is an exact canonical ID; EA is an issued short handle.
                 ids = [EN] if case in ('missing_read', 'cancel', 'budget') else [sources[EA]['handle'], EN]

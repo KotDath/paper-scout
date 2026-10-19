@@ -210,7 +210,15 @@ failed attempts сохранены отдельно, а не переписан�
 
 Адресные интеграции с настоящей Ollama, но явно synthetic scientific/provider
 fixtures: `go run ./integration/researchmemory --runtime "$SCOUT_RUNTIME/memory-check"`,
-`python3 -B integration/agentmemory.py`, `python3 -B integration/flutter_memory.py`.
+`python3 -B integration/grounding.py`, `python3 -B integration/history_replay.py`,
+`python3 -B integration/flutter_memory.py`.
+`agentmemory.py` сохраняет исторический T20 prose-provider fixture и shared seed
+helpers; его CLI несовместим с production grounded contract и не является
+актуальной passing-командой. Grounding проверяет handles/reads/repair/budgets/
+canonical publication; history_replay — provider input после corrections,
+exclusion и note edit/clear, bounded history/недоступность и memory-off.
+Прежнее T20 покрытие content-recall/capture-failure не объявляется повторно
+пройденным этими заменами.
 Последний launcher принудительно использует собственные caches под
 `.bb/runtime/t21/` **текущей worktree**; при `GOPROXY=off` пустой cache не
 работает. T22 вместо launcher собрал `./integration/flutter_memory` локальным
