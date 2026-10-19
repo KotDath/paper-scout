@@ -506,6 +506,31 @@
         "Progress metadata preserves all other nodes; T21 task/status, worktree, branch, role IDs, approved node head and actual merge SHA recorded in separate progress commit. No tracked unit/widget tests, credentials, runtime, PDF or video artifacts added; unit/widget tests not created or run. Sanitized logs remain ignored under .bb/runtime/t21-integration.",
         "UI/APK/video not repeated during serialized integration; approved claude-in-mobile evidence and fixture/live limitations remain in docs/verification/T21.md. Production live scientific acceptance A-to-B and new video remain T22. Shared secret dotenv not read; no paid live calls, push or deployment."
       ]
+    },
+    "T22": {
+      "status": "done",
+      "worktree": "/home/kotdath/omp/personal/ai/paper-scout-worktrees/T22",
+      "branch": "dag/t22",
+      "threads": {
+        "executor": "thr_y5cjys5w2s",
+        "reviewer": "thr_84a6jvfajq",
+        "simplifier": "thr_5w5i7qv9uy"
+      },
+      "base_sha": "d217cf58427293233594192510540299ac5a1344",
+      "approved_head_sha": "7922435ef39f9378251498424474b6c7089ca711",
+      "merge_sha": "245585876d5e87298a32d58a70e089d037aace7e",
+      "checks": [
+        "Pre-merge: clean main matched expected 23ac74eb918530ac55fa77d17bf93a31a40e41ee; base d217cf58427293233594192510540299ac5a1344 is an ancestor. Clean dag/t22 worktree matched approved 7922435ef39f9378251498424474b6c7089ca711. Two review/fix cycles, simplification and final reviewer approval confirmed; verify.patch matches node diff except terminal newline.",
+        "git merge --no-ff dag/t22: PASS without conflicts; merge 245585876d5e87298a32d58a70e089d037aace7e. Product tree matches approved node head; existing main workflow/protocol retry changes retained. Independent worktree registrations, branches and heads preserved; T22 remains clean.",
+        "GOPROXY=off go build -mod=readonly -o .bb/runtime/t22-integration/bin/ ./..., go vet -mod=readonly ./... and go mod verify: PASS with existing root-local caches. Dependency files unchanged. Flutter analyze --no-pub client: PASS, no issues.",
+        "GOPROXY=off python3 -B integration/check.py: 14/14 groups PASS on merge commit; production/integration executables built with -race -mod=readonly, no race diagnostics. Real HTTP/SQLite/auth/Poppler, full analysis/coverage, BM25/dense/RRF with installed Qwen3, research API, cancellation and OS-process crash/restart/recovery checked. arXiv/DeepSeek boundaries explicitly use HTTP fixtures; no paid calls.",
+        "GOFLAGS=-race python3 -B integration/grounding.py: 27/27 PASS with production cmd/paper-scout, real HTTP/auth/SQLite/Qwen3 and synthetic source/provider fixtures. Scoped handles, exact references/excerpts, required original reads, bounded repair/failure/cancel/budget, canonical accepted replay, literal notes, direct/report-level corrections and memory-off passed; no paid calls or race diagnostics.",
+        "GOFLAGS=-race python3 -B integration/history_replay.py: 8/8 PASS; actual provider input checks current correction/exclusion, note edit/clear, annotation overflow/unavailability, five-report bound and memory-off. GOFLAGS=-race python3 -B integration/history_lifecycle.py: 8/8 PASS; sequential note clear with memory on/off, correction revision after seven follow-ups/origin aging, legacy notices, dependency overflow/foreign ownership and archive hash failure. Immutable reports, bounded context and canonical publication preserved; synthetic provider/science, paid0, no race diagnostics.",
+        "Standalone documented integration/flutter_memory and integration/researchmemory built with -race -mod=readonly and run on disposable databases: PASS. Real Dart/Go/HTTP/auth/SQLite/Qwen3; nullable snapshots, recalled/referenced, current annotations, stale 409, exclude/restore, immutable snapshots, ownership/logout, ADD/NOOP, rebuild, note/correction races, bounded origins/context and outage checked. Researchmemory made 33 real embedding requests. Scientific origins/report snapshots explicitly synthetic; no paid calls or race diagnostics.",
+        "All 14 approved video-manifest artifact hashes match in T22 worktree. Final MP4s and manifest copied into ignored root artifacts/. Final SHA-256: full 1b3cffef73c9d44aeb8179e46bea2fe22b7736e390fd8b01d7bd332617dff310; memory 51677bbbd512e8133971e308ca2a61fa6bf3fb7df8fb1b61dc5426671c92a5c8. ffprobe: H.264, 720x1780, CFR30; full 2721.633333s/81649 frames/103506514 bytes; memory 1057.400000s/31722 frames/52541046 bytes. Complete ffmpeg -v error -xerror decode of both root copies passed with empty logs.",
+        "Changed Go formatting, Python syntax and whole-merge git diff --check: PASS. No tracked unit/widget tests, credentials, runtime, PDF or video artifacts added; unit/widget tests not created or run. Ephemeral ports and disposable databases used; sanitized evidence retained under ignored .bb/runtime/t22-integration. Progress JSON preserves all other nodes.",
+        "No new paid live calls; APK/device UI and visual frame review not repeated during integration. Approved live A-to-note-to-restart-to-new-B, scientific spot checks, claude-in-mobile scenes and version-labelled joined videos retained in docs/verification/T22.md with controlled fixtures, older binaries, extraction limits and incomplete semantic verification disclosed. Historical paid ledger remains 202 requests/1837524 tokens. Raw/supporting evidence remains in T22 worktree. Secret dotenv not read; no push or deployment."
+      ]
     }
   }
 }

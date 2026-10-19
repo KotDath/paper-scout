@@ -23,6 +23,6 @@
     {"id":"T19","title":"Память исследований: запись, консолидация и поиск","depends_on":["T18"],"status":"done"},
     {"id":"T20","title":"Автоматический recall между исследованиями","depends_on":["T19"],"status":"done"},
     {"id":"T21","title":"Flutter: память и ссылки на прошлые исследования","depends_on":["T19"],"status":"done"},
-    {"id":"T22","title":"Production live память, видео и сдача","depends_on":["T20","T21"],"status":"todo"}
+    {"id":"T22","title":"Production live память, видео и сдача","depends_on":["T20","T21"],"status":"done"}
   ]
 }
