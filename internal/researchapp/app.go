@@ -162,12 +162,7 @@ func materialize(ctx context.Context, db *store.Store, search *retrieval.Service
 			}
 		}
 	}
-	if result.Grounded {
-		err = materializeMemory(ctx, db, r.UserID, r.ID, &report, result.MemoryIDs)
-	} else {
-		err = materializeMemory(ctx, db, r.UserID, r.ID, &report)
-	}
-	if err != nil {
+	if err = materializeMemory(ctx, db, r.UserID, r.ID, &report, result.MemoryIDs); err != nil {
 		return report, err
 	}
 	report.Citations, err = json.Marshal(citations)

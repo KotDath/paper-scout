@@ -525,12 +525,6 @@ func (g *grounding) validate(raw string) (string, []string, []string) {
 				fmt.Fprintf(&b, "%s [%s]:\n> %s\n\n", cur.Title, cur.ID, cur.Quotes[0].Text)
 			}
 			used[m.Hit.MemoryID] = true
-			// A disputed claim's delivered correction is mandatory, not scientific proof.
-			for _, annotation := range g.memory {
-				if annotation.Hit.Kind == "user_correction" && annotation.Hit.TargetID == m.Hit.MemoryID {
-					used[annotation.Hit.MemoryID] = true
-				}
-			}
 		}
 	}
 	for _, id := range d.Notes {
@@ -541,8 +535,8 @@ func (g *grounding) validate(raw string) (string, []string, []string) {
 		}
 		used[m.Hit.MemoryID] = true
 	}
-	// Annotation closure also applies to a materially used note/correction;
-	// user feedback cannot be hidden by rendering only its parent annotation.
+	// One closure includes direct, transitive and report-level corrections for
+	// every materially used claim/note. Feedback is not scientific proof.
 	for pass := 0; pass < len(g.memory); pass++ {
 		changed := false
 		for _, m := range g.memory {

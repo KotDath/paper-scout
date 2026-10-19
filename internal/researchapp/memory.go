@@ -14,7 +14,7 @@ var memoryLink = regexp.MustCompile(`\[memory:([^\]\r\n]*)\]`)
 
 // Only actual run snapshots authorize links. A matching title, another run's
 // snapshot, or even an owned but unrecalled entry cannot authorize a reference.
-func materializeMemory(ctx context.Context, db *store.Store, owner, run string, report *store.Report, accepted ...[]string) error {
+func materializeMemory(ctx context.Context, db *store.Store, owner, run string, report *store.Report, accepted []string) error {
 	snapshots, err := db.MemorySnapshots(ctx, owner, run)
 	if err != nil {
 		return err
@@ -69,8 +69,10 @@ func materializeMemory(ctx context.Context, db *store.Store, owner, run string, 
 		}
 		return marker
 	}
-	if len(accepted) > 0 {
-		for _, id := range accepted[0] {
+	// Grounded reports use only typed selections, even when that list is empty.
+	// Literal user text may contain markers without authorizing new references.
+	if report.Grounded {
+		for _, id := range accepted {
 			marker := "[memory:" + id + "]"
 			if resolve(marker) != marker {
 				return errors.New("accepted memory unavailable")
