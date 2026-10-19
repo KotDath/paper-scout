@@ -743,3 +743,37 @@ Memory-off выключает automatic recall, но не owner-scoped пров�
 
 Адресная production HTTP/SQLite/Qwen3 проверка actual provider input:
 `python3 -B integration/history_replay.py` (science/provider synthetic, paid0).
+
+### T22 review2: предупреждения не становятся новой памятью
+
+`reports.history_replay_json` — private provenance того же immutable отчёта:
+точная длина принятого answer prefix в байтах, SHA-256 prefix и список зависимых
+report IDs. CompleteReport сохраняет provenance атомарно с canonical final,
+Markdown и terminal state; поле не выдаётся в публичном Report JSON. В prefix
+не входит добавленное сервером предупреждение. Replay проверяет границу/hash,
+а актуальные annotations/notes получает заново по всему owner-scoped dependency
+closure, включая прежние warning-only reports с пустыми Sources/Referenced.
+Правка note/correction поэтому продолжает действовать, когда исходный report
+вышел из окна пяти видимых отчётов. Model prose также удерживается при изменении
+состояния в любом зависимом origin, а не только вырезается старый warning.
+
+Closure и union для принятого ответа ограничены **32 report IDs**, с дедупликацией
+циклов, прежним общим deadline30s и общим cap12000 Unicode-символов annotations/
+snapshots/manifest metadata. Это новый предел dependency closure; прежний лимит
+пяти reports в видимом history replay остаётся. Превышение, чужая зависимость,
+недоступность или неверный archive hash удерживают prose и явно показывают
+ограничение. Неполное происхождение не маскируется как available. В длинном диалоге
+предел32 может потребовать нового диалога/проверки originals; архив не удаляется.
+
+Для fix1 legacy reports без byte boundary используются **точные** report IDs
+из последнего owner-scoped `history_context_prepared` audit. Такие Markdown
+полностью удерживаются, их состояния и зависимости перечитываются. Heading/
+regex/prefix matching и угадывания IDs нет; старые Markdown/snapshots не меняются.
+Legacy reports без такого audit используют прежний immutable текст с текущими
+annotations. Отдельный DB backfill с переписыванием содержимого не нужен.
+
+Адресная последовательная проверка: `python3 -B integration/history_lifecycle.py`.
+Реальные production HTTP/auth/SQLite/Qwen3; явно synthetic source/provider, paid0.
+Note edit→follow-up→clear→follow-up, correction V1→V2 и семь follow-up до aging,
+legacy notice, dependency overflow/foreign origin и повреждённый archive hash.
+Это дополняет history_replay/grounding, не заменяет live научную приёмку.

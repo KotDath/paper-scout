@@ -137,3 +137,15 @@ No canonical report/snapshot is edited and no new citation handle is issued here
 omitted counts and total automatic-memory-rune accounting; current metadata is private audit.
 The accepted Markdown includes a server-rendered current-history warning even
 if the model omits that warning. Existing report entity/API remain unchanged.
+
+### T22 review2 private replay provenance
+
+Task migration `T22_history_replay.sql` adds nullable `reports.history_replay_json`.
+It records the accepted archive prefix's byte length/SHA-256, up to32 owner-scoped
+report dependencies, and completeness. This is private server provenance on the
+existing Report (`json:"-"`), atomically persisted by CompleteReport; public
+Markdown, report/snapshot bytes and citation IDs stay immutable. Replay excludes
+persisted dynamic notices and resolves the bounded dependency closure's current
+annotations/notes independently of top-k and the five visible history reports.
+Legacy notices without a verified boundary are withheld using exact existing
+audit dependencies, without guessing identifiers or splitting user Markdown.

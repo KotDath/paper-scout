@@ -81,7 +81,7 @@ func materialize(ctx context.Context, db *store.Store, search *retrieval.Service
 	if err != nil {
 		return store.Report{}, err
 	}
-	report := store.Report{Markdown: result.Answer, Sources: sources, Limitations: []string{}, Grounded: result.Grounded, GroundingRepairs: result.GroundingRepairs}
+	report := store.Report{Markdown: result.Answer, Sources: sources, Limitations: []string{}, Grounded: result.Grounded, GroundingRepairs: result.GroundingRepairs, HistoryReplay: result.HistoryReplay}
 	citations := []retrieval.Hit{}
 	seen := map[string]bool{}
 	papers := map[string]bool{}

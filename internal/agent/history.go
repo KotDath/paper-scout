@@ -2,6 +2,9 @@ package agent
 
 import (
 	"context"
+	"crypto/sha256"
+	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -42,12 +45,74 @@ type replayCurrent struct {
 	Notes       []replayNote       `json:"current_notes"`
 }
 type historyReplay struct {
-	remaining int
-	omitted   int
-	states    []replayCurrent
+	remaining  int
+	omitted    int
+	states     []replayCurrent
+	reports    map[string]bool
+	incomplete bool
 }
 
-func (h *historyReplay) reset(cap int) { h.remaining = cap; h.omitted = 0; h.states = nil }
+const historyDependencyLimit = 32
+
+func (h *historyReplay) reset(cap int) {
+	h.remaining = cap
+	h.omitted = 0
+	h.states = nil
+	h.reports = map[string]bool{}
+	h.incomplete = false
+}
+
+func (h *historyReplay) provenance(answer string) *store.ReportReplay {
+	ids := []string{}
+	for id := range h.reports {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	hash := sha256.Sum256([]byte(answer))
+	return &store.ReportReplay{ArchiveBytes: len(answer), ArchiveSHA256: hex.EncodeToString(hash[:]), Reports: ids, Complete: !h.incomplete}
+}
+
+// Before fix2, notices were appended without a recorded byte boundary. Use the
+// existing private audit to recover exact report dependencies; never guess IDs
+// or split Markdown by headings (a user can include the same heading). The old
+// bytes remain immutable but are withheld when their archive prefix is unknown.
+func (s AgentSession) replayArchive(ctx context.Context, owner string, report store.Report) (string, []string, error) {
+	if p := report.HistoryReplay; p != nil {
+		if !p.Complete || len(p.Reports) > historyDependencyLimit {
+			return "", p.Reports, researchmemory.ErrScope
+		}
+		if p.ArchiveBytes < 0 || p.ArchiveBytes > len(report.Markdown) {
+			return "", p.Reports, errors.New("invalid historical archive boundary")
+		}
+		archive := report.Markdown[:p.ArchiveBytes]
+		hash := sha256.Sum256([]byte(archive))
+		if !utf8.ValidString(archive) || hex.EncodeToString(hash[:]) != p.ArchiveSHA256 {
+			return "", p.Reports, errors.New("invalid historical archive hash")
+		}
+		return archive, p.Reports, nil
+	}
+	var raw string
+	err := s.Store.DB.QueryRowContext(ctx, `SELECT e.private_payload_json FROM run_events e JOIN runs r ON r.id=e.run_id WHERE r.user_id=? AND r.id=? AND e.event_type='history_context_prepared' ORDER BY e.seq DESC LIMIT 1`, owner, report.RunID).Scan(&raw)
+	if errors.Is(err, sql.ErrNoRows) {
+		return report.Markdown, nil, nil
+	}
+	if err != nil {
+		return "", nil, err
+	}
+	var event struct {
+		History struct {
+			Reports []replayCurrent `json:"reports"`
+		} `json:"history"`
+	}
+	if err := json.Unmarshal([]byte(raw), &event); err != nil {
+		return "", nil, err
+	}
+	ids := []string{}
+	for _, c := range event.History.Reports {
+		ids = append(ids, c.Report)
+	}
+	return "", ids, nil
+}
 
 func (s AgentSession) replayReport(ctx context.Context, owner, question string, report store.Report, h *historyReplay) string {
 	current := replayCurrent{Report: report.ID, Status: "available", Annotations: []replayAnnotation{}, Notes: []replayNote{}}
@@ -55,33 +120,65 @@ func (s AgentSession) replayReport(ctx context.Context, owner, question string, 
 	if memory == nil {
 		memory = researchmemory.New(s.Store.DB, nil)
 	}
+	ids := []string{report.ID}
 	reports := map[string]bool{report.ID: true}
-	if report.ResearchMemory != nil {
-		for _, hit := range report.ResearchMemory.Referenced {
-			if hit.ReportID != "" {
-				reports[hit.ReportID] = true
-			}
-			for _, origin := range hit.Origins {
-				if origin.ReportID != "" {
-					reports[origin.ReportID] = true
-				}
+	archive := ""
+	var err error
+	seen := map[string]bool{}
+	notes := map[string]replayNote{}
+	for i := 0; i < len(ids); i++ {
+		id := ids[i]
+		origin := report
+		if id != report.ID {
+			origin, err = s.Store.Report(ctx, owner, id)
+			if err != nil {
+				break
 			}
 		}
-	}
-	ids := []string{}
-	for id := range reports {
-		ids = append(ids, id)
-	}
-	sort.Strings(ids)
-	var err error
-	if len(ids) > 5 {
-		err = researchmemory.ErrScope
-	}
-	seen := map[string]bool{}
-	for _, id := range ids {
+		var text string
+		var deps []string
+		text, deps, err = s.replayArchive(ctx, owner, origin)
 		if err != nil {
 			break
 		}
+		if id == report.ID {
+			archive = text
+			if archive == "" {
+				current.Status = "withheld_legacy_history_notice"
+			}
+		}
+		if origin.ResearchMemory != nil {
+			for _, hit := range origin.ResearchMemory.Referenced {
+				if hit.ReportID != "" {
+					deps = append(deps, hit.ReportID)
+				}
+				for _, o := range hit.Origins {
+					if o.ReportID != "" {
+						deps = append(deps, o.ReportID)
+					}
+				}
+			}
+		}
+		sort.Strings(deps)
+		for _, dep := range deps {
+			if reports[dep] {
+				continue
+			}
+			if dep == "" || len(reports) == historyDependencyLimit {
+				err = researchmemory.ErrScope
+				break
+			}
+			reports[dep] = true
+			ids = append(ids, dep)
+		}
+		if err != nil {
+			break
+		}
+		if !h.reports[id] && len(h.reports) == historyDependencyLimit {
+			err = researchmemory.ErrScope
+			break
+		}
+		h.reports[id] = true
 		aa, e := memory.AnnotationsForReport(ctx, owner, id)
 		if e != nil {
 			err = e
@@ -103,17 +200,29 @@ func (s AgentSession) replayReport(ctx context.Context, owner, question string, 
 				current.Status = "withheld_changed_annotations"
 			}
 		}
-	}
-	if err == nil {
-		current.Notes, err = s.replayNotes(ctx, owner, report)
-		for _, n := range current.Notes {
+		var nn []replayNote
+		nn, err = s.replayNotes(ctx, owner, origin)
+		if err != nil {
+			break
+		}
+		for _, n := range nn {
+			n.Changed = n.Changed || notes[n.Paper].Changed
+			notes[n.Paper] = n
 			if n.Changed || n.Excluded || n.State == "disputed" {
 				current.Status = "withheld_changed_user_context"
 			}
 		}
 	}
+	for _, n := range notes {
+		current.Notes = append(current.Notes, n)
+	}
+	sort.Slice(current.Notes, func(i, j int) bool { return current.Notes[i].Paper < current.Notes[j].Paper })
 	if err != nil {
+		h.incomplete = true
 		current.Status = "withheld_annotations_unavailable"
+		if errors.Is(err, researchmemory.ErrScope) {
+			current.Status = "withheld_history_dependency_limit"
+		}
 		if errors.Is(err, researchmemory.ErrPending) {
 			current.Status = "withheld_annotations_pending"
 		}
@@ -137,7 +246,7 @@ func (s AgentSession) replayReport(ctx context.Context, owner, question string, 
 	h.states = append(h.states, current)
 	data := map[string]any{"current": current, "historical_text": "", "historical_question": ""}
 	if current.Status == "available" {
-		data["historical_text"] = report.Markdown
+		data["historical_text"] = archive
 		data["historical_question"] = question
 	}
 	encoded, _ := json.Marshal(data)
@@ -212,7 +321,7 @@ func (h *historyReplay) notice() string {
 		if c.Status == "available" {
 			continue
 		}
-		reason := map[string]string{"withheld_changed_annotations": "записи исправлены, оспорены или исключены", "withheld_changed_user_context": "личная заметка изменилась или неактивна", "withheld_annotations_unavailable": "актуальные аннотации недоступны", "withheld_annotations_pending": "актуальные аннотации ещё обновляются", "withheld_annotation_budget": "полный набор обязательных поправок не поместился в контекст"}[c.Status]
+		reason := map[string]string{"withheld_legacy_history_notice": "у старого предупреждения нет проверяемой границы архивного текста", "withheld_history_dependency_limit": "зависимости исторического контекста не помещаются в конечный предел", "withheld_changed_annotations": "записи исправлены, оспорены или исключены", "withheld_changed_user_context": "личная заметка изменилась или неактивна", "withheld_annotations_unavailable": "актуальные аннотации недоступны", "withheld_annotations_pending": "актуальные аннотации ещё обновляются", "withheld_annotation_budget": "полный набор обязательных поправок не поместился в контекст"}[c.Status]
 		fmt.Fprintf(&b, "\n\n### Исторический отчёт — актуальное предупреждение\n\nОтчёт %s сохранён без изменений. Его прежний текст не передан модели, потому что %s. Старые выводы и пользовательские предпочтения нельзя молча использовать как действующие.\n", c.Report, reason)
 		for _, a := range c.Annotations {
 			fmt.Fprintf(&b, "\nЗапись %s: %s · ревизия %d.\n", a.ID, replayState(a.State, a.Excluded), a.Revision)

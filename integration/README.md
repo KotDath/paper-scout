@@ -121,3 +121,10 @@ annotation failure, metadata budgets, the five-report bound and memory-off.
 Both use production Go HTTP/auth/SQLite, real Qwen3 and clearly labelled synthetic
 science/provider fixtures; no paid calls or unit/widget tests. They do not claim
 that every historical T20 content-recall/capture-failure scenario was rerun.
+
+T22 review2: `python3 -B integration/history_lifecycle.py` adds eight sequential
+production HTTP/SQLite/Qwen3 scenarios, with synthetic sources/provider and paid0:
+note edit→follow-up→clear (memory on/off), correction revision, correction aging
+after seven follow-ups, legacy notices, dependency overflow/foreign dependency,
+and archive hash failure. It inspects actual fixture-provider input and checks
+immutable reports and canonical publication. It does not rerun paid A/B science.

@@ -129,6 +129,7 @@ func (s *Store) RunSources(ctx context.Context, owner, run string) ([]ReportSour
 }
 
 type Report struct {
+	HistoryReplay    *ReportReplay   `json:"-"`
 	Grounded         bool            `json:"-"`
 	GroundingRepairs int             `json:"-"`
 	ResearchMemory   *ResearchMemory `json:"research_memory"`
@@ -142,16 +143,31 @@ type Report struct {
 	CreatedAt        string          `json:"created_at"`
 }
 
+// ReportReplay separates the accepted answer prefix from the appended state
+// notice and records all reports whose current context was delivered. It is
+// private provenance, not a new report, snapshot or citation manifest.
+type ReportReplay struct {
+	ArchiveBytes  int      `json:"archive_bytes"`
+	ArchiveSHA256 string   `json:"archive_sha256"`
+	Reports       []string `json:"reports"`
+	Complete      bool     `json:"complete"`
+}
+
 func (s *Store) Report(ctx context.Context, owner, id string) (Report, error) {
 	var out Report
 	var citations, sources, coverage, limits string
-	var memory *string
-	err := s.DB.QueryRowContext(ctx, `SELECT id,run_id,markdown,citations_json,sources_json,coverage_json,limitations_json,created_at,research_memory_json FROM reports WHERE id=? AND user_id=?`, id, owner).Scan(&out.ID, &out.RunID, &out.Markdown, &citations, &sources, &coverage, &limits, &out.CreatedAt, &memory)
+	var memory, replay *string
+	err := s.DB.QueryRowContext(ctx, `SELECT id,run_id,markdown,citations_json,sources_json,coverage_json,limitations_json,created_at,research_memory_json,history_replay_json FROM reports WHERE id=? AND user_id=?`, id, owner).Scan(&out.ID, &out.RunID, &out.Markdown, &citations, &sources, &coverage, &limits, &out.CreatedAt, &memory, &replay)
 	if err != nil {
 		return out, notFound(err)
 	}
 	if memory != nil {
 		if err = json.Unmarshal([]byte(*memory), &out.ResearchMemory); err != nil {
+			return out, err
+		}
+	}
+	if replay != nil {
+		if err = json.Unmarshal([]byte(*replay), &out.HistoryReplay); err != nil {
 			return out, err
 		}
 	}
@@ -201,7 +217,11 @@ func (s *Store) CompleteReport(ctx context.Context, owner, run string, report Re
 		if err != nil {
 			return err
 		}
-		_, err = tx.ExecContext(ctx, `INSERT INTO reports(id,user_id,run_id,markdown,citations_json,sources_json,coverage_json,limitations_json,created_at,research_memory_json) VALUES(?,?,?,?,?,?,?,?,?,?)`, report.ID, owner, run, report.Markdown, string(report.Citations), string(sources), string(report.Coverage), string(limits), report.CreatedAt, string(memory))
+		replay, err := json.Marshal(report.HistoryReplay)
+		if err != nil {
+			return err
+		}
+		_, err = tx.ExecContext(ctx, `INSERT INTO reports(id,user_id,run_id,markdown,citations_json,sources_json,coverage_json,limitations_json,created_at,research_memory_json,history_replay_json) VALUES(?,?,?,?,?,?,?,?,?,?,?)`, report.ID, owner, run, report.Markdown, string(report.Citations), string(sources), string(report.Coverage), string(limits), report.CreatedAt, string(memory), string(replay))
 		if err != nil {
 			return err
 		}

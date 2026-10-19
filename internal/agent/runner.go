@@ -26,6 +26,7 @@ type AgentRunner struct {
 }
 
 type Result struct {
+	HistoryReplay    *store.ReportReplay
 	Run              store.Run
 	Answer           string
 	Usage            Usage
@@ -226,6 +227,7 @@ func (a *AgentRunner) RunWithFinalizer(ctx context.Context, owner, conversation,
 					continue
 				}
 				result.Answer = answer + replay.notice()
+				result.HistoryReplay = replay.provenance(answer)
 				result.Grounded = true
 				result.EvidenceIDs = ground.usedEvidence
 				result.MemoryIDs = ground.usedMemory
