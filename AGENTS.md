@@ -14,8 +14,12 @@ before implementing. `docs/execution-protocol.md` governs delegated execution.
   retain generated unit/widget tests. Do not substitute mocks for live evidence.
 - Device UI interaction must use claude-in-mobile. adb is permitted for build
   installation, reverse networking, screen recording, and artifact transfer.
-- Work only in your assigned worktree and branch. Read other source repositories
-  only as references. Do not change main, merge other branches, push, or publish.
+- Delegated role threads must work only in their assigned worktree and branch.
+  Read other source repositories only as references. Role threads must not
+  change main, merge other branches, push, or publish.
+- The root coordinator may merge approved task branches into main and push
+  project commits to origin; the user has authorized push. This authorization
+  does not include deployment or publishing releases.
 - No extra delegation from role threads; node coordination owns their lifecycle.
 - Never read/print secret-bearing dotenv files. App processes may load credentials
   from the shared root `.env` by path; log only presence and success/failure.
