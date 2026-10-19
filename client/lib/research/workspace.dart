@@ -414,6 +414,17 @@ class _ConversationPaneState extends State<ConversationPane> {
             if (run['id'] != executing?['id'])
               heading(context, statusText(run['status'])),
             if (run['error_code'] != null) Text(runFailure(run['error_code'])),
+            if (run['usage'] case final Json usage) ...[
+              Text(
+                'Расход запуска: ${usage['deepseek_requests'] ?? 0} запросов модели · '
+                '${usage['total_tokens'] ?? 0} токенов · '
+                '${usage['tool_calls'] ?? 0} обращений к инструментам',
+              ),
+              if ((usage['unknown_usage_requests'] as num? ?? 0) > 0)
+                Text(
+                  'Точный расход ${usage['unknown_usage_requests']} запросов неизвестен.',
+                ),
+            ],
             if (!activeRun(run) && run['report_id'] == null)
               const Text(
                 'Готового отчёта нет. Доступные источники и ход работы сохранены.',
