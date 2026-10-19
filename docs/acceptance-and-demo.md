@@ -110,14 +110,19 @@ T01–T18 закрывают предыдущую сдачу дня35. Ново�
 
 ## T22 — полный production walkthrough
 
-Implement-приёмка выполнена 2026-10-19; review/fix/simplify/final verify остаются
+Implement и fix1 выполнены 2026-10-19; следующие review/simplify/final verify остаются
 отдельными этапами координатора. Основной [paper-scout-full-demo.mp4](../artifacts/paper-scout-full-demo.mp4)
-— **34:14,2**, отдельный [research-memory-demo.mp4](../artifacts/research-memory-demo.mp4)
-— **6:30**. H.264, 720×1780, CFR30, без аудио; UI playback **2x**.
-Это **пять записанных частей с явными joins**, не непрерывная capture.
+— **43:08,8**, отдельный [research-memory-demo.mp4](../artifacts/research-memory-demo.mp4)
+— **15:24,6**. H.264, 720×1780, CFR30, без аудио; UI playback **2x**.
+Это **семь записанных частей с явными joins**, не непрерывная capture.
 Части 1/2 — реальные production исследования/lifecycle, 3 — подписанные
 synthetic fallback fixtures, 4 — просмотр тех же reports/originals, 5 — latest
-APK с фактическим usage существующего A без paid replay. Первые 8s launcher
+APK с фактическим usage существующего A без paid replay. Части 6/7 —
+зафиксированные через claude-in-mobile same-dialogue correction/exclusion и
+note edit/clear; Go c35ea1c/1cfcc7f, тот же APK c3a2e2e. Failed clear attempt
+виден перед успешным повтором после diagnostic fix; первичный A/B не переснимался.
+Memory clip также включает обе новые сцены. Старые финальные exports сохранены
+как `*-before-fix1-630653a.mp4`. Вступление +8s сдвигает все прежние таймкоды. Первые 8s launcher
 setup и verification interval part2 05:00–14:30 убраны явно; raw сохранены.
 В пропущенном интервале повторно открывался уже готовый отчёт: outcome и текст
 показаны по обе стороны, неудача не заменена успехом. Основной A/B снят на
@@ -131,32 +136,38 @@ d64b9ab; последующие contract fixes проверены адресно
 
 | Функция → действие | Ожидаемое доказательство / фактическая сцена | Таймкод full | Supporting artifact |
 | --- | --- | --- | --- |
-| Адрес API, неверный вход, вход, профиль | Настройка loopback origin, понятная ошибка неверного пароля, вход/интересы | 00:04–01:15 | full MP4, final contact0, public profile/history |
-| Новый A, arXiv search/import/analysis/progress | Вопрос MemoryBank, реальные source/tool events, готовый отчёт; actual original query `ti:MemoryBank` раскрыт повторно в latest APK | 01:00–02:10; 34:08–34:14 | primary raw, usage raw, run A/public audit |
-| Report, usage и coverage | Complete39757/39757; **8 requests / 43366 tokens / 4 tools** показаны UI на неизменённом A, не inferred cost | 01:35–02:10; 33:52–34:02 | full MP4, usage raw, run A.usage |
-| Saved/read и личная note | Оба switches и точная содержательная note, server save | 02:15–02:30 | primary raw, primary-public library |
-| Go/Flutter restart, сохранение истории/библиотеки/профиля | OS restart, повторный вход; сервер использует ту же DB | 02:25–03:20 | primary raw + process log; повторно 23:30–24:25 |
-| Новый диалог B без A в question | Вопрос только MemGPT, автоматический recall A+note до model request; fresh complete52333/52333 | 03:00–04:20 | primary raw, report B, event seq3<4 / 27<28 |
-| Scientific A/B contrast и note | Положительный контраст S/t updating vs queue eviction/recall storage, original excerpts; note применена к MSC5+1/personas/unknown duration | 04:20–06:05 | primary raw, primary-public evidence; broad absence claim не засчитан |
-| Recalled/referenced, origin A, старый отчёт | Раздельные секции/typed cards, переход к A, report provenance; точная note в историческом snapshot после clear не объявляется текущей | 04:20–05:15; 32:00–32:58 | full MP4, memory API; последний просмотр тех же accepted reports |
-| Полное чтение ≠ index ≠ retrieval | Extraction warning, coverage, document/index counts и coordinates отдельны; exact A excerpt13799–15297 и B queue8983–10724 / MSC18036–19010 | 01:35–02:10; 06:10–06:35; 07:04; 32:55; 33:10 | primary/provenance raw, public evidence |
-| Переход к оригиналу | A abs page показана в основной части; HTML B первый раз blank body (gap сохранён), позднее arXiv abs B отрисован с title/authors/abstract | 02:00; 06:30–06:45; **33:17–33:21** | full MP4, provenance raw; URL2310.08560v2 |
-| Настоящий библиотечный hybrid search | BM25+dense+RRF, индекс81/81, candidates20/20, ranks/scores, переход к MSC original | **06:59–07:06** | primary raw; real Ollama/SQLite HTTP retrieval |
-| Настоящий same-dialogue follow-up | Existing sources, original queue thresholds, citations, без нового full analysis | 07:50–09:30 | primary raw, run_2XTL.../report |
-| Negative recall | Вулканы нерелевантны: recalled3/referenced0, нет выдуманного сравнения/scientific facts | 09:40–10:30 | primary raw, negative live report |
-| Semantic fault → original counterexample | Явно внедрён только derived wrong100years/real-users claim с valid ev; live original disproves it **до** user correction | 10:55–13:35 | primary raw, semantic-fault-setup, real fault review |
-| Correction/disputed/provenance/revision/exclude/restore | User feedback требует проверки, не сообщает правильные числа; disputed rev2 → exclude3 → restore4; позже exclude5 | 13:15–14:40; 22:00–23:15 | primary/lifecycle raw, current Entry/API |
-| Ответ после correction и edited note | Новая live question; original10days/15virtual; not_supported, correction/note2 дословно; inventory overclaim сохранён как limitation, catalog scope исправлен | 17:35–19:55; 20:15–21:55 | lifecycle raw, post-correction report |
-| Note clear/rebuild/restart и новый ответ | UI edit2/clear, сохранённое exclusion5, OS restart, библиотека без note; следующий live run не получает старую note/fault | 18:00–18:25; 23:00–25:25 | lifecycle raw; verified-rebuild/post-rebuild-search/after-clear |
-| Старый отчёт во время active follow-up, cancel/continue | **Локальный provider-delay fixture**, zero upstream; старый real report доступен; первый failed attempt сохранён, второй cancelled, input снова доступен | 25:35–27:58 | lifecycle raw, controlled-cancel-check; реальные status/report ownership |
-| 401 и второй аккаунт | Явный disposable session-expiry fixture → настоящий401/logout; Bob: пустые история/библиотека/профиль, отдельная память | 28:00–28:33 | lifecycle raw; Bob empty both branches + foreign404 API audit |
-| Abstract-only и partial | **Подписанные synthetic UI fixtures**, onlyabstract84/84 не fulltext; partial42/84 | 28:52–29:25 | fallback raw, fixture reports/documents |
-| Pending/unavailable memory | Подписанные fixture reports, состояния не трактуются как отсутствие истории | 29:35–30:00 | fallback raw, HTTP fixture reasons |
-| Lexical-only/hybrid-partial | Реальные UI подписи «dense недоступен» / «неполный индекс»; общая Ollama не выключалась | 30:03–30:24 | fallback raw, explicitly synthetic snapshots |
-| Detail pending/unavailable/retry | Русские ошибки памяти; после снятия local fault повторная загрузка открывает actual entry | 30:33–30:48 | fallback raw, auth/owner checks остаются настоящими |
-| Stale revision409/reload | Настоящее конкурентное PATCH fixture изменило revision; stale UI получает409, reload показываетrev2 | 30:49–31:00 | fallback raw, real SQLite/PATCH |
-| Сеть и восстановление | Закрытый ephemeral local endpoint → понятная ошибка; восстановлен origin и вход в actual production | 31:12–31:43 | fallback raw, основной сервер не подменял scientific ответы |
+| Адрес API, неверный вход, вход, профиль | Настройка loopback origin, понятная ошибка неверного пароля, вход/интересы | 00:12–01:23 | full MP4, final contact0, public profile/history |
+| Новый A, arXiv search/import/analysis/progress | Вопрос MemoryBank, реальные source/tool events, готовый отчёт; actual original query `ti:MemoryBank` раскрыт повторно в latest APK | 01:08–02:18; 34:16–34:22 | primary raw, usage raw, run A/public audit |
+| Report, usage и coverage | Complete39757/39757; **8 requests / 43366 tokens / 4 tools** показаны UI на неизменённом A, не inferred cost | 01:43–02:18; 34:00–34:10 | full MP4, usage raw, run A.usage |
+| Saved/read и личная note | Оба switches и точная содержательная note, server save | 02:23–02:38 | primary raw, primary-public library |
+| Go/Flutter restart, сохранение истории/библиотеки/профиля | OS restart, повторный вход; сервер использует ту же DB | 02:33–03:28 | primary raw + process log; повторно 23:38–24:33 |
+| Новый диалог B без A в question | Вопрос только MemGPT, автоматический recall A+note до model request; fresh complete52333/52333 | 03:08–04:28 | primary raw, report B, event seq3<4 / 27<28 |
+| Scientific A/B contrast и note | Положительный контраст S/t updating vs queue eviction/recall storage, original excerpts; note применена к MSC5+1/personas/unknown duration | 04:28–06:13 | primary raw, primary-public evidence; broad absence claim не засчитан |
+| Recalled/referenced, origin A, старый отчёт | Раздельные секции/typed cards, переход к A, report provenance; точная note в историческом snapshot после clear не объявляется текущей | 04:28–05:23; 32:08–33:06 | full MP4, memory API; последний просмотр тех же accepted reports |
+| Полное чтение ≠ index ≠ retrieval | Extraction warning, coverage, document/index counts и coordinates отдельны; exact A excerpt13799–15297 и B queue8983–10724 / MSC18036–19010 | 01:43–02:18; 06:18–06:43; 07:12; 33:03; 33:18 | primary/provenance raw, public evidence |
+| Переход к оригиналу | A abs page показана в основной части; HTML B первый раз blank body (gap сохранён), позднее arXiv abs B отрисован с title/authors/abstract | 02:08; 06:38–06:53; **33:25–33:29** | full MP4, provenance raw; URL2310.08560v2 |
+| Настоящий библиотечный hybrid search | BM25+dense+RRF, индекс81/81, candidates20/20, ranks/scores, переход к MSC original | **07:07–07:14** | primary raw; real Ollama/SQLite HTTP retrieval |
+| Настоящий same-dialogue follow-up | Existing sources, original queue thresholds, citations, без нового full analysis | 07:58–09:38 | primary raw, run_2XTL.../report |
+| Negative recall | Вулканы нерелевантны: recalled3/referenced0, нет выдуманного сравнения/scientific facts | 09:48–10:38 | primary raw, negative live report |
+| Semantic fault → original counterexample | Явно внедрён только derived wrong100years/real-users claim с valid ev; live original disproves it **до** user correction | 11:03–13:43 | primary raw, semantic-fault-setup, real fault review |
+| Correction/disputed/provenance/revision/exclude/restore | User feedback требует проверки, не сообщает правильные числа; disputed rev2 → exclude3 → restore4; позже exclude5 | 13:23–14:48; 22:08–23:23 | primary/lifecycle raw, current Entry/API |
+| Ответ после correction и edited note | Новая live question; original10days/15virtual; not_supported, correction/note2 дословно; inventory overclaim сохранён как limitation, catalog scope исправлен | 17:43–20:03; 20:23–22:03 | lifecycle raw, post-correction report |
+| Note clear/rebuild/restart и новый ответ | UI edit2/clear, сохранённое exclusion5, OS restart, библиотека без note; следующий live run не получает старую note/fault | 18:08–18:33; 23:08–25:33 | lifecycle raw; verified-rebuild/post-rebuild-search/after-clear |
+| Старый отчёт во время active follow-up, cancel/continue | **Локальный provider-delay fixture**, zero upstream; старый real report доступен; первый failed attempt сохранён, второй cancelled, input снова доступен | 25:43–28:06 | lifecycle raw, controlled-cancel-check; реальные status/report ownership |
+| 401 и второй аккаунт | Явный disposable session-expiry fixture → настоящий401/logout; Bob: пустые история/библиотека/профиль, отдельная память | 28:08–28:41 | lifecycle raw; Bob empty both branches + foreign404 API audit |
+| Abstract-only и partial | **Подписанные synthetic UI fixtures**, onlyabstract84/84 не fulltext; partial42/84 | 29:00–29:33 | fallback raw, fixture reports/documents |
+| Pending/unavailable memory | Подписанные fixture reports, состояния не трактуются как отсутствие истории | 29:43–30:08 | fallback raw, HTTP fixture reasons |
+| Lexical-only/hybrid-partial | Реальные UI подписи «dense недоступен» / «неполный индекс»; общая Ollama не выключалась | 30:11–30:32 | fallback raw, explicitly synthetic snapshots |
+| Detail pending/unavailable/retry | Русские ошибки памяти; после снятия local fault повторная загрузка открывает actual entry | 30:41–30:56 | fallback raw, auth/owner checks остаются настоящими |
+| Stale revision409/reload | Настоящее конкурентное PATCH fixture изменило revision; stale UI получает409, reload показываетrev2 | 30:57–31:08 | fallback raw, real SQLite/PATCH |
+| Сеть и восстановление | Закрытый ephemeral local endpoint → понятная ошибка; восстановлен origin и вход в actual production | 31:20–31:51 | fallback raw, основной сервер не подменял scientific ответы |
 | NOOP/rebuild bytes / memory-off control | Backend checks PASS, **не выдаются за отдельную UI-функцию/сцену**: NOOP1, immutable hashes, same B off snapshots0/null | UI state lifecycle выше; direct/HTTP checks отдельно | verified-rebuild, verified-memory-off, note-only guard |
+| Fix1: старый B → correction/exclusion | Актуальная disputed/excluded rev3 и дословная correction рядом с immutable отчётом; правка не научный факт | 35:20–36:10 | fix1 replay raw, live-public, replay-verification |
+| Fix1: историческая note и текущая правка | Сначала старый snapshot с прежней note; UI меняет текущую note на критерий «threshold examples ≠ deployment measurements» | 36:10–37:50 | fix1 replay raw; old report/snapshot SHA unchanged |
+| Fix1: same-dialogue follow-up, current note | B dialogue без импорта/полного анализа: original reads, новый критерий применён, старый prose не источник | 38:15–39:25 | run_FO627...; 4 requests/49723 tokens; Go c35ea1c |
+| Fix1: clear и честный failed attempt | Note очищена; первый clear answer отклонён после bounded repair, report не опубликован; ошибка видна | 39:25–41:32 | run_LE3QQ...; 3 requests/34696 tokens; failed raw сохранён |
+| Fix1b: повтор после diagnostic fix | Тот же B dialogue/DB/question, Go 1cfcc7f; 3 requests/36854 tokens; новый completed answer | 41:40–42:50 | fix1b clear raw, run_DFAG...; тот же APK |
+| Fix1b: original + нет текущего критерия + warning | Original eviction/recall storage, явное отсутствие активных личных критериев, correction/excluded3/cleared3 в server warning | 42:50–43:08 | fix1b raw, live-public + replay-verification; public history counts до model event |
 
 Все UI-взаимодействия — claude-in-mobile. adb использовался только для
 install/reverse/record/transfer. Проверены рост и finally-stop каждого recorder,

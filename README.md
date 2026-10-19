@@ -8,15 +8,18 @@ AI участвует во всём исследовании: DeepSeek Chat Comp
 
 ## Видео и доказательства
 
-**Новая production приёмка T22 выполнена на этапе implement.**
-[Полный walkthrough](artifacts/paper-scout-full-demo.mp4) — **34:14,2**;
-[отдельный ролик памяти](artifacts/research-memory-demo.mp4) — **6:30**.
-Пять явно соединённых частей, UI playback 2x, 720×1780/30 fps, без аудио.
+**Production приёмка T22 дополнена исправлениями review1 на этапе fix1.**
+[Полный walkthrough](artifacts/paper-scout-full-demo.mp4) — **43:08,8**;
+[отдельный ролик памяти](artifacts/research-memory-demo.mp4) — **15:24,6**.
+Полная версия — семь явно соединённых частей; memory clip — три.
+UI playback 2x, 720×1780/30 fps, без аудио.
 Основной A → note → OS restart → **новый диалог B** использует настоящие
 arXiv/DeepSeek/Qwen3; контролируемые fallback-сцены подписаны отдельно.
+Добавлены same-dialogue correction/exclusion и note edit/clear на Go c35ea1c/1cfcc7f;
+прежний A/B сохранён, версии и failed clear attempt обозначены в joins.
 Старые failed recordings сохранены. Проверки, расходы, ограничения и хеши:
 [T22](docs/verification/T22.md); [матрица сцен](docs/acceptance-and-demo.md#t22--полный-production-walkthrough).
-Два review/fix цикла, simplify и итоговый контроль выполняет координатор.
+Следующий review, simplify и итоговый контроль выполняет координатор.
 
 [Смотреть видео с эмулятора](artifacts/day35-demo.mp4) — **6:54**, H.264, 720×1780, без звука, с титрами. Весь проход ускорен в 1,5 раза; это обозначено на экране. Поиск и ответы реальные. Видео и JSON лежат локально в ignored `artifacts/`, в Git не включены и не опубликованы. В чистом clone их нужно перенести с этой машины и сверить хеши из [T18](docs/verification/T18.md).
 
