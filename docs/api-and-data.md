@@ -118,3 +118,34 @@ HTTP admission запускает AgentRunner в фоне; polling, атомар
 ## Память исследований — контракт продолжения
 
 В T19 добавляются authenticated POST /api/v1/research-memory/search и GET/PATCH /api/v1/research-memory/{memory_id}; PATCH выполняет explicit correction или exclusion с expected_revision, owner берётся только из auth. T20 добавляет memory_recalled и optional research_memory в existing Report: retrieval_mode, reasons, recalled, referenced. Точные JSON и происхождение источников — [research-memory.md](research-memory.md). Memory содержит atomic claim cards с facet/evidence/analysis и версионированные user corrections/exclusions. Из reports/analyses восстанавливается базовая память; rebuild сохраняет пользовательские поправки. Отдельная исходная сущность отчёта не создаётся.
+
+### T22 scoped catalog and report correction closure
+
+The private final-reference manifest has `library_catalog_limited: true`: it lists only selected, issued or recalled papers, never a complete library inventory. `library_catalog_truncated` separately records the 20-paper cap; `library_catalog_scope` states that the total size is unknown. Memory-derived catalog metadata counts toward the automatic memory budget. No public canonical identifiers change.
+
+When an accepted comparison uses a delivered claim, delivered corrections targeting its origin report episode are included verbatim as user annotations, alongside direct and transitive corrections. This preserves the T19 report-wide correction contract without treating feedback as scientific evidence or marking unrelated recalled claims as used.
+
+### T22 review1 historical replay
+
+The private provider input uses `HISTORICAL REPORT CONTEXT` data envelopes,
+not bare old assistant messages. Each carries current owner-scoped annotations
+and note states (including `cleared`), or a bounded withheld status. Corrections,
+exclusions, changed notes and unavailable metadata withhold the old text/question.
+Referenced source-report corrections propagate through later report paraphrases.
+No canonical report/snapshot is edited and no new citation handle is issued here.
+`history_context_prepared` is an additive public run event with report/withheld/
+omitted counts and total automatic-memory-rune accounting; current metadata is private audit.
+The accepted Markdown includes a server-rendered current-history warning even
+if the model omits that warning. Existing report entity/API remain unchanged.
+
+### T22 review2 private replay provenance
+
+Task migration `T22_history_replay.sql` adds nullable `reports.history_replay_json`.
+It records the accepted archive prefix's byte length/SHA-256, up to32 owner-scoped
+report dependencies, and completeness. This is private server provenance on the
+existing Report (`json:"-"`), atomically persisted by CompleteReport; public
+Markdown, report/snapshot bytes and citation IDs stay immutable. Replay excludes
+persisted dynamic notices and resolves the bounded dependency closure's current
+annotations/notes independently of top-k and the five visible history reports.
+Legacy notices without a verified boundary are withheld using exact existing
+audit dependencies, without guessing identifiers or splitting user Markdown.

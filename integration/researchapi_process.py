@@ -24,7 +24,7 @@ class Provider(BaseHTTPRequestHandler):
             'id': 'entrypoint-fixture', 'model': 'fixture',
             'choices': [{'index': 0, 'finish_reason': 'stop',
                          'message': {'role': 'assistant',
-                                     'content': 'Отчёт проверки запуска. Источники не исследованы.'}}],
+                                     'content': json.dumps({'scope':'Entrypoint fixture', 'findings':[], 'comparisons':[], 'notes':[], 'memory_reason':'Источники не исследованы: source-free entrypoint fixture.', 'limitations':[]})}}],
             'usage': {'prompt_tokens': 10, 'completion_tokens': 10, 'total_tokens': 20},
         }).encode()
         self.send_response(200)

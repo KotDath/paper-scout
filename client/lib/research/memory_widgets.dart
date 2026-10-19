@@ -33,24 +33,34 @@ class MemorySection extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      heading(context, 'Найдено в прошлых исследованиях'),
       Text(statusText(memory.mode)),
       for (final reason in memory.reasons) Text('Ограничение памяти: $reason'),
       const Text(
         'Снимок материалов, переданных модели в этом запуске. Это не доказывает их использование в ответе. Детали показывают актуальную запись.',
       ),
-      if (memory.recalled.isEmpty)
-        const Text(
-          'Материалы не найдены или не переданы. Проверьте режим и ограничения выше.',
+      ExpansionTile(
+        title: Text(
+          'Найдено в прошлых исследованиях · ${memory.recalled.length}',
         ),
-      for (final hit in memory.recalled) MemoryCard(hit: hit, open: open),
-      heading(context, 'Ссылки в ответе'),
-      const Text(
-        'Проверенные сервером ссылки на происхождение. Научные утверждения проверяйте по исходным фрагментам.',
+        children: [
+          if (memory.recalled.isEmpty)
+            const Text(
+              'Материалы не найдены или не переданы. Проверьте режим и ограничения выше.',
+            ),
+          for (final hit in memory.recalled) MemoryCard(hit: hit, open: open),
+        ],
       ),
-      if (memory.referenced.isEmpty)
-        const Text('Ответ не содержит проверенных ссылок на память.'),
-      for (final hit in memory.referenced) MemoryCard(hit: hit, open: open),
+      ExpansionTile(
+        title: Text('Ссылки в ответе · ${memory.referenced.length}'),
+        subtitle: const Text(
+          'Проверены ссылки на происхождение. Научные выводы проверяйте по исходным фрагментам.',
+        ),
+        children: [
+          if (memory.referenced.isEmpty)
+            const Text('Ответ не содержит проверенных ссылок на память.'),
+          for (final hit in memory.referenced) MemoryCard(hit: hit, open: open),
+        ],
+      ),
     ],
   );
 }

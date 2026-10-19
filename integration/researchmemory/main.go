@@ -234,6 +234,22 @@ func run(dir string) error {
 	if err = contains(result, note, true); err != nil {
 		return err
 	}
+	// T22 live reproducer: a highly ranked note must not consume its paper's
+	// only group and suppress all scientific provenance, even at limit=1.
+	noteFirst, err := memory.Search(ctx, "owner_a", researchmemory.SearchRequest{Query: note, Limit: 1})
+	if err != nil {
+		return err
+	}
+	if err = require(len(noteFirst.LexicalCandidates) > 0 && noteFirst.LexicalCandidates[0].Kind == "user_note" && len(noteFirst.DenseCandidates) > 0 && noteFirst.DenseCandidates[0].Kind == "user_note", "note-first reproducer did not rank note first in both real branches"); err != nil {
+		return err
+	}
+	if err = require(len(noteFirst.Hits) >= 2 && noteFirst.Hits[0].Kind == "claim" && noteFirst.Hits[0].ReportID != "" && len(noteFirst.Hits[0].EvidenceIDs) > 0, "top note displaced scientific origin from one-paper recall"); err != nil {
+		return err
+	}
+	if err = contains(noteFirst, note, true); err != nil {
+		return err
+	}
+	fmt.Println("PASS T22 note ranks first in BM25 and real Qwen3; limit=1 retains scientific origin/evidence plus exact note")
 	correction := "This historical method claim is disputed: verify the original passage before comparison."
 	var patched researchmemory.Entry
 	code, err = request(server.URL, "PATCH", "/api/v1/research-memory/"+claimID, tokens["owner_a"], researchmemory.Patch{ExpectedRevision: 1, Correction: &correction}, &patched)

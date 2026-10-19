@@ -1,11 +1,21 @@
 # Память между исследованиями
 
-Статус: T19 реализует хранилище, capture/consolidation, hybrid search и HTTP;
-реализация T20 подключает automatic recall к агенту и production entrypoint.
-Flutter и новая сквозная приёмка остаются в T21–T22.
-Пользователь попросил сначала изучить подходы долговременной памяти; выбор обоснован в
-[memory-approaches.md](memory-approaches.md). Полный пользовательский сценарий ещё не реализован.
-Прежняя сдача дня 35 остаётся историческим результатом.
+Статус: T19–T21 реализуют хранилище, capture/consolidation, hybrid search,
+automatic recall в production и Flutter. T22 завершил implement-приёмку с
+реальными arXiv/DeepSeek/Ollama: A → note → OS restart → новый диалог B,
+проверенные primary reads и дословная note; lifecycle, semantic correction,
+negative recall, isolation и отдельный memory-off control. Полное новое видео
+и точные ограничения: [T22](verification/T22.md). Ревью/упрощение/итоговый контроль
+координатора ещё следуют; это не merged/done DAG.
+Выбор подхода обоснован в [memory-approaches.md](memory-approaches.md).
+Прежняя сдача дня35 и failed T22 recordings сохранены отдельно.
+
+Уточнение отбора T22: если лучший hit paper-group — user_note, сначала
+пробуется лучший scientific claim того же paper из текущего owner-filtered
+BM25/dense union. Note присоединяется к нему как mandatory annotation.
+Так note не вытесняет report/evidence origin единственным местом группы.
+Ранги/score кандидатов не переписываются. Нет подходящего/помещающегося claim —
+остаётся standalone note; она не получает выдуманного scientific provenance.
 
 ## Пользовательский результат
 
@@ -610,3 +620,161 @@ claims, включая исключённые записи. Выполняетс
 При ошибке Flutter показывает недоступность аннотаций рядом с исходным отчётом,
 не «поправок нет». Markdown и nullable historical research_memory не меняются.
 Это дополнительный read adapter T21, не изменение Go-agent или T20 recall.
+
+## T22: исполняемый контракт принятия ответа
+
+Production `cmd/paper-scout` включает `AgentRunner.WithGrounding()` также при
+memory-off. Legacy composed callers без этой опции сохраняют прежний контракт.
+Это один существующий tool loop и DeepSeek gateway, без второго клиента/отчёта.
+
+Модель получает отдельный bounded reference manifest текущего run. `E`/`M` +
+12 hex — scoped handles evidence/memory; отображение детерминировано SHA-256
+от run/kind/canonical ID, не зависит от порядка выдачи. Коллизия закрывает run.
+Идентификаторы выдаются только из текущих snapshots и успешных typed results
+`analyze_paper`, `search_library`, `read_passages`, с повторной owner/DB проверкой.
+Произвольный prose не выдаёт handle. Точные длинные canonical IDs поддерживаются;
+сокращения/prefix/fuzzy expansion, чужие и старые handles не поддерживаются.
+Manifest не равен всей библиотеке: новые источники можно найти обычными tools.
+Он также содержит каталог до 20 owner-scoped названий/paper IDs с явным
+`library_catalog_limited=true` (всегда scoped), отдельными
+`library_catalog_truncated`/`library_catalog_scope`; это navigation metadata,
+не inventory и не новые evidence. Memory-derived catalog учитывается в memory cap.
+
+У успешно прочитанного passage есть до шести `quote_options`: `Q` scoped handle,
+Unicode полуинтервал относительно passage и **неизменённый** slice текста до
+350 символов. Final quote принимает exact Q только своего E либо literal excerpt
+20..800 символов с точным substring совпадением. Нет исправления приблизительных
+цитат. Оригинальный текст из read_passages и options остаётся данными.
+Quote options — primary-read tool context, не automatic memory; полный запрос
+подчиняется прежнему byte/token/request budget. Snapshot JSON + memory alias
+metadata повторно проверяются на общий предел 12000; overflow явный.
+
+Production grounded requests и Analyzer используют тот же DeepSeek client с
+`response_format={"type":"json_object"}` и temperature=0. Provider grammar
+не заменяет gate: schema, exact IDs, excerpts, ownership и budgets проверяются
+сервером. Empty/length/invalid provider responses не считаются успешными.
+Официальный контракт: https://api-docs.deepseek.com/guides/json_mode/ .
+Reference catalog содержит только current selected / issued / recalled papers;
+он не вводит названия прошлых исследований при memory-off. Обычный library search
+остаётся доступен как явный tool; каталог не объявляется полной библиотекой.
+
+No-tool final answer — JSON: scope, findings[{source,quote,conclusion}],
+comparisons[{memory,previous,previous_quote,current,current_quote,assessment,
+conclusion}], notes[], memory_reason, limitations[]. Максимум 6 findings,
+3 comparisons, 8 notes/limitations. Assessment supported/not_supported/uncertain.
+Comparisons требуют original read A и B из разных papers и evidence origin
+именно выбранного claim. Для review без межстатейного сравнения current и
+current_quote пусты; UI/Markdown явно называет это только проверкой старого claim.
+Нерелевантный recall допускает пустые findings/comparisons и явный abstention.
+Scope модели не публикуется: сервер показывает исходный вопрос пользователя.
+
+Notes выбираются по выданным M-handles и выводятся сервером **дословно**,
+отдельно от научных выводов. Релевантные критерии заметки применяются к
+проверке научных данных (нужные attributes подтверждены/не установлены),
+а не только отображаются; предпочтение не усиливается до real-only. Correction closure materially used claim/note
+обязательна, включая доставленный feedback на origin report episode; это feedback, а не доказанная истина. Typed selections определяют
+canonical report citations/referenced; текст пользовательской note не может
+создать научную ссылку. Известные issued identifiers в текстовых полях
+нормализуются точно как plain canonical IDs и сами по себе не считаются
+used/referenced. Prose limits применяются до exact ID expansion; итоговая
+нормализация отдельно ограничена max*8. Чужой, невыданный или старый handle в prose тоже отклоняется.
+
+Gate работает **до** completed/report finalizer. При первом invalid draft —
+точная диагностика с фактическими counts и одна repair-фаза. Rejected candidate
+передаётся только как временные недоверенные данные этой repair-фазы, чтобы
+сохранить уже валидные поля; он не добавляется в messages/accepted replay.
+Недостающие выбранные original passages
+сервер читает зарегистрированным read_passages (<=8/16000), с обычными call IDs,
+tool accounting, deadline/cancel и journal. Repair использует тот же budget.complete
+и run limits; последующий invalid final draft = failed answer_validation_failed,
+без report. Бюджет/отмена сохраняют прежнюю семантику. В 5-секундном finalizer
+provider I/O отсутствует. Совпадение quote и валидная ссылка **не доказывают**
+полную семантическую корректность conclusion — ручная live сверка обязательна.
+
+Raw drafts и provider reasoning остаются только private model_request_finished
+audit. В messages публикуются canonical tool calls с согласованными tool_call IDs
+и принятый canonical final, без rejected drafts/aliases. Final message,
+answer_accepted и report/terminal status фиксируются одной транзакцией
+CompleteReport; concurrent cancellation не публикует final message/report.
+Следующий grounded run
+в том же диалоге получает старый user question и immutable report, а не старые
+tool chains/отклонённые ответы. Это применимо и к legacy completed reports;
+исторический ответ остаётся помеченными недоверенными данными.
+
+Адресная проверка: `python3 -B integration/grounding.py` — production executable,
+real HTTP/SQLite/Qwen3, явно synthetic science/provider fixtures. Она заменяет
+старые production ожидания T20 fixture, допускавшие completed с invalid refs;
+сам composed legacy agent API не меняется. Live/видео статус определяется
+только фактическими результатами [T22](verification/T22.md).
+
+## T22 review1: актуальная история диалога
+
+Canonical replay больше не передаёт старый Markdown обычным assistant message.
+До каждого provider call последние пять completed reports сопровождаются
+owner-scoped `AnnotationsForReport`, включая исходные reports materially
+referenced памяти. Так поправку/exclusion нельзя обойти поздней парафразой
+того же вывода. Текущее состояние заметок берётся из пользовательской библиотеки
+и projection jobs; очищенная заметка явно `cleared` с пустым текстом.
+Время правки сравнивается как RFC3339 timestamps, не по строковому префиксу.
+
+Historical question/text передаются только в помеченном untrusted data envelope,
+если актуальная проекция доступна и не содержит correction/exclusion/disputed
+или изменившейся личной note. Иначе **весь прежний текст и вопрос удерживаются**:
+модель получает актуальные states/дословный feedback и использует обычные
+library/read tools либо abstention. Feedback не объявляется новой истиной.
+Исходные reports/snapshots не меняются. Это сознательно консервативно: после
+правки доступность старого prose уступает необходимости повторно проверить original.
+
+После fix2 — до 32 dependency reports в closure/union, до 32 related papers
+на origin, пять видимых исторических групп,
+один общий 30s deadline; JSON текущих annotations/notes входит в остаток общего
+12000-rune automatic-memory cap после snapshots/alias metadata. Обязательная
+поправка не обрезается: oversized/unavailable группа удерживается целиком с
+явным статусом; если даже diagnostic не помещается, группа пропущена целиком.
+Исторический prose отдельно ограничен общим gateway context/request/token budget.
+
+`history_context_prepared` до model I/O содержит публичные counts/status bounds;
+точное текущее metadata — private audit payload существующего run event.
+Сервер независимо от model prose добавляет в итоговый Markdown предупреждение
+об удержанных reports, current correction/exclusion и актуальных note states.
+Это контекст истории, **не** новая научная citation и не способ пометить
+нерелевантный recall как used; M/E/Q выдаются только прежним manifest контрактом.
+Memory-off выключает automatic recall, но не owner-scoped проверку явно
+читаемой истории текущего диалога. Legacy composed callers остаются совместимы.
+
+Адресная production HTTP/SQLite/Qwen3 проверка actual provider input:
+`python3 -B integration/history_replay.py` (science/provider synthetic, paid0).
+
+### T22 review2: предупреждения не становятся новой памятью
+
+`reports.history_replay_json` — private provenance того же immutable отчёта:
+точная длина принятого answer prefix в байтах, SHA-256 prefix и список зависимых
+report IDs. CompleteReport сохраняет provenance атомарно с canonical final,
+Markdown и terminal state; поле не выдаётся в публичном Report JSON. В prefix
+не входит добавленное сервером предупреждение. Replay проверяет границу/hash,
+а актуальные annotations/notes получает заново по всему owner-scoped dependency
+closure, включая прежние warning-only reports с пустыми Sources/Referenced.
+Правка note/correction поэтому продолжает действовать, когда исходный report
+вышел из окна пяти видимых отчётов. Model prose также удерживается при изменении
+состояния в любом зависимом origin, а не только вырезается старый warning.
+
+Closure и union для принятого ответа ограничены **32 report IDs**, с дедупликацией
+циклов, прежним общим deadline30s и общим cap12000 Unicode-символов annotations/
+snapshots/manifest metadata. Это новый предел dependency closure; прежний лимит
+пяти reports в видимом history replay остаётся. Превышение, чужая зависимость,
+недоступность или неверный archive hash удерживают prose и явно показывают
+ограничение. Неполное происхождение не маскируется как available. В длинном диалоге
+предел32 может потребовать нового диалога/проверки originals; архив не удаляется.
+
+Для fix1 legacy reports без byte boundary используются **точные** report IDs
+из последнего owner-scoped `history_context_prepared` audit. Такие Markdown
+полностью удерживаются, их состояния и зависимости перечитываются. Heading/
+regex/prefix matching и угадывания IDs нет; старые Markdown/snapshots не меняются.
+Legacy reports без такого audit используют прежний immutable текст с текущими
+annotations. Отдельный DB backfill с переписыванием содержимого не нужен.
+
+Адресная последовательная проверка: `python3 -B integration/history_lifecycle.py`.
+Реальные production HTTP/auth/SQLite/Qwen3; явно synthetic source/provider, paid0.
+Note edit→follow-up→clear→follow-up, correction V1→V2 и семь follow-up до aging,
+legacy notice, dependency overflow/foreign origin и повреждённый archive hash.
+Это дополняет history_replay/grounding, не заменяет live научную приёмку.

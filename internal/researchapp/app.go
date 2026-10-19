@@ -81,20 +81,27 @@ func materialize(ctx context.Context, db *store.Store, search *retrieval.Service
 	if err != nil {
 		return store.Report{}, err
 	}
-	report := store.Report{Markdown: result.Answer, Sources: sources, Limitations: []string{}}
+	report := store.Report{Markdown: result.Answer, Sources: sources, Limitations: []string{}, Grounded: result.Grounded, GroundingRepairs: result.GroundingRepairs, HistoryReplay: result.HistoryReplay}
 	citations := []retrieval.Hit{}
 	seen := map[string]bool{}
 	papers := map[string]bool{}
 	for _, s := range sources {
 		papers[s.Paper.ID] = true
 	}
-	for _, id := range evidenceID.FindAllString(result.Answer, -1) {
+	ids := evidenceID.FindAllString(result.Answer, -1)
+	if result.Grounded {
+		ids = result.EvidenceIDs
+	}
+	for _, id := range ids {
 		if seen[id] {
 			continue
 		}
 		seen[id] = true
 		hit, err := search.Evidence(ctx, r.UserID, id)
 		if errors.Is(err, retrieval.ErrNotFound) {
+			if result.Grounded {
+				return report, errors.New("accepted evidence unavailable")
+			}
 			report.Limitations = append(report.Limitations, "unresolved_citation: "+id)
 			continue
 		}
@@ -155,7 +162,7 @@ func materialize(ctx context.Context, db *store.Store, search *retrieval.Service
 			}
 		}
 	}
-	if err = materializeMemory(ctx, db, r.UserID, r.ID, &report); err != nil {
+	if err = materializeMemory(ctx, db, r.UserID, r.ID, &report, result.MemoryIDs); err != nil {
 		return report, err
 	}
 	report.Citations, err = json.Marshal(citations)

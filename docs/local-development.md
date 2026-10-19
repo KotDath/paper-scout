@@ -1,8 +1,10 @@
 # Локальный runbook Paper Scout
 
-Команды выполняются из корня **текущей worktree**, для сдачи T18 —
-`/home/kotdath/omp/personal/ai/paper-scout-worktrees/T18`, ветка `dag/t18`.
-Проверенные результаты и границы повторной проверки: [T18](verification/T18.md).
+Команды выполняются из корня **текущей worktree**, для T22 —
+`/home/kotdath/omp/personal/ai/paper-scout-worktrees/T22`, ветка `dag/t22`.
+Production live implement-приёмка T22 пройдена; review/fix/simplify выполняет
+координатор: [T22](verification/T22.md).
+Историческая сдача: [T18](verification/T18.md).
 `make` targets в проекте отсутствуют; ниже используются существующие entrypoints.
 
 ## Подготовка
@@ -129,6 +131,10 @@ Compile-time origin по умолчанию — `http://127.0.0.1:8080`.
 
 ## Повтор live-прохода T16/T17
 
+Это исторический сценарий. Для нового сценария памяти обязательна production
+команда из раздела «Go API и два аккаунта», а не этот integration entrypoint.
+См. раздел о памяти ниже и [результат T22](verification/T22.md).
+
 Это bounded UI-композиция с production HTTP/auth/SQLite/AgentRunner/tools,
 Analyzer и retrieval. Флаг `--live` выключает внешние fixtures; официальный
 DeepSeek, arXiv и установленная Ollama обязательны. Платных запросов до
@@ -173,6 +179,56 @@ partial, неверный ID или усечение не считаются у�
 Доказательства уже снятого прохода: [T16](verification/T16.md), [T17](verification/T17.md).
 
 ## Проверки
+
+### Память через production entrypoint (T22)
+
+`RESEARCH_MEMORY_ENABLED=true` по умолчанию включает capture/automatic recall
+в `cmd/paper-scout`. Границы остаются конечными: 32 provider requests, 24 tools,
+250000 tokens, 900 секунд на run; recall до первого запроса и максимум один
+после анализа, до 12000 Unicode-символов JSON вместе с provenance/annotations.
+Memory write не вызывает DeepSeek. Недоступность памяти — явное ограничение,
+а не отсутствие истории. Детали: [контракт](research-memory.md).
+
+На новой disposable БД выполните production seed/start, войдите через Flutter,
+создайте A и исследуйте одну работу (например, MemoryBank `2305.10250v1`).
+Откройте coverage/evidence, сохраните содержательную личную note. Остановите
+Go и приложение; запустите Go с **той же** SQLite/cache и port 0, обновите reverse
+и origin, войдите снова. В **новом** диалоге спросите про другую статью
+(например, MemGPT `2310.08560v2`) без имени/ID A и без готового сравнения.
+Проверьте порядок `memory_recalled` перед `model_request_started`, method/result/
+limitation cards, точный note snapshot, ссылки текущего run и original passages
+обеих работ. Recalled не доказывает referenced/использование; три утверждения
+нужно сверить вручную. В T22 исправленный основной проход прошёл; прежние
+failed attempts сохранены отдельно, а не переписаны.
+
+Для memory-off контроля сделайте SQLite backup в отдельный локальный каталог,
+назначьте ему свой cache и порт 0, затем запустите тот же production executable
+с `RESEARCH_MEMORY_ENABLED=false`. Отправьте тот же вопрос B в новом диалоге:
+ожидаются отсутствие snapshots и `report.research_memory=null`. Не используйте
+историю диалога A как контекст контроля. Это не общий benchmark качества.
+Не перезапускайте общую Ollama ради outage-сцен.
+
+Адресные интеграции с настоящей Ollama, но явно synthetic scientific/provider
+fixtures: `go run ./integration/researchmemory --runtime "$SCOUT_RUNTIME/memory-check"`,
+`python3 -B integration/grounding.py`, `python3 -B integration/history_replay.py`,
+`python3 -B integration/history_lifecycle.py`,
+`python3 -B integration/flutter_memory.py`.
+`agentmemory.py` сохраняет исторический T20 prose-provider fixture и shared seed
+helpers; его CLI несовместим с production grounded contract и не является
+актуальной passing-командой. Grounding проверяет handles/reads/repair/budgets/
+canonical publication; history_replay — provider input после corrections,
+exclusion и note edit/clear, bounded history/недоступность и memory-off.
+History_lifecycle дополнительно проверяет последовательные follow-up, revision
+после выхода origin из окна истории, legacy notices и provenance failures.
+Прежнее T20 покрытие content-recall/capture-failure не объявляется повторно
+пройденным этими заменами.
+Последний launcher принудительно использует собственные caches под
+`.bb/runtime/t21/` **текущей worktree**; при `GOPROXY=off` пустой cache не
+работает. T22 вместо launcher собрал `./integration/flutter_memory` локальным
+Go cache и запустил бинарник с `--runtime` в T22 (он сам вызывает Dart).
+Это не замена production live научной приёмке.
+
+### Остальные интеграции
 
 ```sh
 go vet -mod=readonly ./...
@@ -259,3 +315,33 @@ sha256sum artifacts/new-demo-part1.mp4
 `artifacts/retrieval-evaluation.json`; сверьте SHA-256 по [T18](verification/T18.md).
 Эти ignored файлы не появятся в новом clone сами. В Git остаются код, runbook
 и sanitized verification; видео/PDF/credentials/БД туда не добавлять.
+
+### Новая полная запись T22
+
+Основной файл `artifacts/paper-scout-full-demo.mp4` (45:21,6), отдельный
+`research-memory-demo.mp4` (17:37,4). Полная версия — восемь частей с явными joins: fresh A/B,
+поздние lifecycle проверки, подписанные synthetic fallback scenes и поздний
+просмотр тех же accepted reports/originals и две fix1 same-dialogue сцены
+correction/exclusion/note edit/clear. Memory clip содержит исходный A/B excerpt
+и обе fix1 сцены; последняя fix2 сцена отдельно подписана как controlled
+synthetic provider/science на production cmd/paper-scout (646f1e0), paid0.
+Go c35ea1c/1cfcc7f и неизменённый APK c3a2e2e подписаны;
+failed clear attempt сохранён перед успешным повтором. UI playback 2x, CFR30, H.264,
+720×1780, без аудио. Первые 8s setup и verification interval part2 05:00–14:30
+исключены явно; raw/failed recordings и transcode drafts сохранены.
+
+Все Android UI-действия — claude-in-mobile. `scripts/record-demo.sh DEVICE
+artifacts/clip.mp4 0` только пишет display, проверяет рост и finally-stop своего
+recorder; запускать лишь при поддержке unlimited recording устройством.
+Для воспроизведения delay/fallback не выключать общую Ollama: использовать
+`integration/flutter_memory --runtime <new T22 temp dir> --ui --video-fallbacks`;
+это synthetic science/snapshot fixture, не основной research entrypoint.
+`SCOUT_VIDEO_FAULT_FILE` может содержать только `memory_pending` или
+`memory_unavailable`, сохраняя настоящие auth/ownership checks.
+
+Финальные MP4 проверять `ffprobe` и полным `ffmpeg -v error -xerror -i <MP4>
+-f null -`, затем визуально начало/конец и все сцены. Для native VFR сначала
+нормализовать timestamps/fps, затем trim и setpts/2; не полагаться на input-seek
+при длинных статических кадрах. [Матрица](acceptance-and-demo.md#t22--полный-production-walkthrough),
+[хеши/расход/границы](verification/T22.md). В Git только sanitized verification,
+без видео/кэша/PDF/DB/secrets/private provider data.

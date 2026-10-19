@@ -34,7 +34,7 @@ def verify_process(binary, env, directory):
                 self.send_error(404)
                 return
             body = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
-            name = next(m['content'] for m in reversed(body['messages']) if m['role'] == 'user')
+            name = next(m['content'] for m in reversed(body['messages']) if m['role'] == 'user' and (m.get('content') or '').startswith('T15_'))
             with lock:
                 calls[name] = calls.get(name, 0) + 1
             if name in entered:
@@ -54,7 +54,7 @@ def verify_process(binary, env, directory):
                 payload = json.dumps({
                     'id': 't15-http-fixture', 'model': 'fixture',
                     'choices': [{'index': 0, 'finish_reason': 'stop', 'message': {
-                        'role': 'assistant', 'content': 'Проверка сохранения. Источники не исследованы.',
+                        'role': 'assistant', 'content': json.dumps({'scope':'Process persistence fixture', 'findings':[], 'comparisons':[], 'notes':[], 'memory_reason':'Источники не исследованы: source-free process fixture.', 'limitations':[]}),
                         'reasoning_content': private_marker}}],
                     'usage': {'prompt_tokens': 10, 'completion_tokens': 10, 'total_tokens': 20},
                 }).encode()

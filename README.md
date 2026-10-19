@@ -8,6 +8,21 @@ AI участвует во всём исследовании: DeepSeek Chat Comp
 
 ## Видео и доказательства
 
+**Production приёмка T22 дополнена исправлениями review2 на этапе fix2.**
+[Полный walkthrough](artifacts/paper-scout-full-demo.mp4) — **45:21,6**;
+[отдельный ролик памяти](artifacts/research-memory-demo.mp4) — **17:37,4**.
+Полная версия — восемь явно соединённых частей; memory clip — четыре.
+UI playback 2x, 720×1780/30 fps, без аудио.
+Основной A → note → OS restart → **новый диалог B** использует настоящие
+arXiv/DeepSeek/Qwen3; контролируемые fallback-сцены подписаны отдельно.
+Добавлены same-dialogue correction/exclusion и note edit/clear на Go c35ea1c/1cfcc7f;
+прежний A/B сохранён, версии и failed clear attempt обозначены в joins.
+Последняя сцена Go 646f1e0 проверяет многократный follow-up/clear через production
+команду с явно синтетическим provider/source fixture, без платных вызовов.
+Старые failed recordings сохранены. Проверки, расходы, ограничения и хеши:
+[T22](docs/verification/T22.md); [матрица сцен](docs/acceptance-and-demo.md#t22--полный-production-walkthrough).
+Упрощение и итоговый контроль выполняет координатор.
+
 [Смотреть видео с эмулятора](artifacts/day35-demo.mp4) — **6:54**, H.264, 720×1780, без звука, с титрами. Весь проход ускорен в 1,5 раза; это обозначено на экране. Поиск и ответы реальные. Видео и JSON лежат локально в ignored `artifacts/`, в Git не включены и не опубликованы. В чистом clone их нужно перенести с этой машины и сверить хеши из [T18](docs/verification/T18.md).
 
 | Доказательство | Результат |
@@ -17,11 +32,11 @@ AI участвует во всём исследовании: DeepSeek Chat Comp
 | [T15: интеграционная регрессия](docs/verification/T15.md) | 14 групп: HTTP + SQLite, ownership, тексты/Poppler, coverage/fallback, RRF, настоящая Qwen3, отмена, лимиты, OS crash recovery |
 | [T18: итоговые проверки и хеши](docs/verification/T18.md) | Проверка команд запуска, повтор интеграционного набора, целостность локальных артефактов и декодирование видео |
 
-Видеозапись использует ограниченную live-композицию `integration/researchtools` с настоящими продуктовыми модулями и выключенными fixtures. Это отдельный entrypoint от `cmd/paper-scout`; его запуск и бюджеты приведены в runbook. Общая матрица требований и таймкоды: [приёмка](docs/acceptance-and-demo.md).
+Историческая видеозапись T17 использует ограниченную live-композицию `integration/researchtools` с настоящими продуктовыми модулями и выключенными fixtures. Это отдельный entrypoint от `cmd/paper-scout`; его запуск и бюджеты приведены в runbook. Новая попытка T22 использует production entrypoint. Общая матрица требований и таймкоды: [приёмка](docs/acceptance-and-demo.md).
 
 ## Локальный запуск
 
-Нужны Go 1.26+, Flutter/Android SDK, Poppler, работающая Ollama с установленной `qwen3-embedding:0.6b` и серверная конфигурация DeepSeek/двух аккаунтов. Все команды выполняются из текущей worktree. Для T18 это `/home/kotdath/omp/personal/ai/paper-scout-worktrees/T18`, ветка `dag/t18`.
+Нужны Go 1.26+, Flutter/Android SDK, Poppler, работающая Ollama с установленной `qwen3-embedding:0.6b` и серверная конфигурация DeepSeek/двух аккаунтов. Все команды выполняются из текущей worktree. Для T22 это `/home/kotdath/omp/personal/ai/paper-scout-worktrees/T22`, ветка `dag/t22`.
 
 1. Настроить локальные каталоги сборок и конфигурацию по [runbook](docs/local-development.md#подготовка).
 2. Собрать `cmd/paper-scout`, выполнить `-seed`, запустить API с loopback-портом `0` и постоянной локальной БД — [точные команды](docs/local-development.md#go-api-и-два-аккаунта).
@@ -51,4 +66,14 @@ AI участвует во всём исследовании: DeepSeek Chat Comp
 
 ## Продолжение: память между исследованиями
 
-После приёмки T18 пользователь расширил цель: самостоятельно связывать новые исследования с ранее изученными и учитывать исправления между сессиями. Функция **ещё не реализована**. [Исследование подходов](docs/memory-approaches.md), [выбранный механизм и критерии](docs/research-memory.md), DAG T19–T22. Прежнее видео не является доказательством этого нового сценария.
+T19–T21 реализуют typed method/result/limitation cards с provenance, ADD/NOOP,
+версии заметок, corrections/exclusion, BM25+Qwen3+RRF, автоматический recall
+до первого запроса и после анализа, отдельные recalled/referenced в Flutter.
+В T22 подтверждены capture/NOOP, новый диалог после рестарта, проверенные
+original reads A/B и дословная пользовательская note, semantic counterexample,
+correction/exclusion, note edit/clear/rebuild/restart, negative recall, изоляция
+и live memory-off контроль. Production final gate проверяет scoped references
+и exact excerpts до report commit; это не полная семантическая верификация.
+[Исследование подходов](docs/memory-approaches.md), [контракт](docs/research-memory.md),
+[результаты и ограничения](docs/verification/T22.md). Прежняя сдача T18
+остаётся отдельным историческим результатом.

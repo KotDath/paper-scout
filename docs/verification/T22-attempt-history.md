@@ -1,0 +1,372 @@
+# T22 — архив промежуточных попыток
+
+Исторические checkpoints ниже сохраняют прежние blocked-статусы и расходы.
+Текущий итог находится в [T22.md](T22.md). Упоминания прежних основных MP4
+относятся к сохранённым `*-blocked-8209ebd.mp4`, не к новым итоговым файлам.
+Научные ответы, исходники и неудачные raw recordings не переписывались.
+
+# T22 — production live память, видео и сдача
+
+Продолжение 2026-10-19: первый blocked результат принят как промежуточный.
+Реализован исполняемый grounded contract (подробности в конце research-memory.md),
+20 адресных fixture-интеграций PASS; process/researchapi/agent регрессии PASS.
+Первоначальные результаты и видео ниже сохранены. Новая полная приёмка/видео
+ещё выполняются; статус не повышен авансом.
+
+Новый live preflight на копии реальных кэшированных A/B: первые пять попыток
+сохранены отдельно (`t22-grounded-preflight*.json`), с закрытием конкретных
+причин: strict schema diagnostics, copied excerpt mismatch → exact Q handles,
+known aliases in prose → canonical normalization, неверный paper ID из memory
+→ bounded owner-scoped library catalog. Из них v3 — честный accepted abstention
+при memory_prompt_budget, не сравнение A/B. v6 принял original A/B passages,
+канонические ссылки и дословную note: 3 requests / 38925 tokens, unknown=0.
+Это cached diagnostic, не свежая полная приёмка; inter-paper contrast и применение
+критерия к evaluation требуют повторной ручной проверки в основном проходе.
+Всего шесть новых preflights: 19 requests / 182043 tokens, unknown=0;
+вместе с исходными 44/324756 — 63 requests / 506799 tokens на этом checkpoint.
+Ни один rejected draft не стал report/публичным scientific answer.
+
+Дополнительная свежая попытка A `run_SKQ7PV4E4HIA7KWXIFJWBQWN7Q`:
+7 requests / 78479 tokens, unknown=0. Ответ grounded принят, но Analyzer
+получил массивы строк вместо объектов и честно оставил partial 0/39757.
+Raw видео сохранено как `artifacts/t22-grounded-A-partial-raw.mp4`, SHA-256
+`4750650ca714da6f5468bec63bf2d1869e0f7a8fa5b6b3b5c56431d3d172cf70`.
+Эта попытка не засчитана как полное чтение. В JSON входа Analyzer добавлен
+`response_contract` с объектным примером и реальным выданным evidence ID;
+никакой конвертации невалидного prose в claims, retry или зачёта coverage нет.
+`go run ./integration/analysis --runtime .bb/runtime/t22/analysis-shape-fixture`
+PASS (real HTTP/SQLite, synthetic source/provider). Адресный live Analyzer
+`--live --paper 2305.10250v1 --env-file <shared path>` PASS: fresh arXiv,
+39757/39757, 2 reading parts + synthesis, 3 requests / 17269 tokens, unknown=0,
+SQLite reopen. Сумма checkpoint теперь 73 requests / 602547 tokens, unknown=0.
+Основной новый проход после этой адресной проверки ещё не засчитан.
+
+Следующий свежий A `run_MFL67DH73ULSCFZ3BX3KTUXHWD` — complete
+39757/39757, 8 semantic claims + episode, 9 requests / 58134 tokens.
+После UI note + OS restart Go/Flutter новый B без A в вопросе
+`run_AFCIVV6FLGNXYZYBQYVA3UR274` прочитал 52333/52333, но failed:
+первому draft нужен read A, единственный repair выдал 7 findings при cap=6.
+8 requests / 76933 tokens; не опубликован ложный completed report.
+Видео сохранено `t22-grounded-B-repair-failed-raw.mp4` и отдельный JSON с SHA.
+Repair теперь получает предыдущий candidate как временные недоверенные данные,
+не accepted history; диагностика arrays содержит actual counts. Cap=6 не ослаблен.
+21 provider-fixture HTTP/SQLite/Qwen3 сценарий PASS, включая oversized repair и
+проверку отсутствия rejected drafts/aliases в будущем assistant replay.
+Cached live protocol preflight `run_N3JZ3ZW2RPACFUJLSYLUDQKYY5` completed,
+3 requests / 40477 tokens, exact note + проверенные A/B citations. Это cached
+копия, не fresh acceptance; критерий заметки ещё требует адресной проверки.
+Checkpoint до этой проверки: 93 requests / 778091 tokens, unknown=0.
+
+Cached note-application preflight `run_HN4WQR4L6IR2D7CBI7MJXW7UL4`:
+5 requests / 90039 tokens, unknown=0, completed. Заметка применена: MSC
+5+искусственная 6-я сессия, human labelers/синтетические QA, неизвестная календарная
+длительность. Без source A модель честно не стала сравнивать, поэтому это не A/B
+acceptance. Новый полный A `run_MEVTD77D765CWLMIE4DJJ2JPNO` — complete,
+8 requests / 47355 tokens. Новый B `run_7NPNC4BUAQTYRLU2ZBTGNIO7LM` — failed,
+8 requests / 88517 tokens: repair исправил 7 findings до 6, но prose 659 символов
+после exact ID expansion стал 807 при max800. Все IDs известны, причина
+в серверном порядке проверки длины. Теперь prose bound проверяется до expansion,
+отдельный конечный rendering bound max*8 сохранён. 23 HTTP/SQLite/Qwen3 fixture
+сценария PASS: допустимая alias expansion и 801-symbol raw prose rejection,
+плюс прежние provenance/repair/history/cancel/isolation cases.
+Видео сохранено `t22-grounded-canonical-length-failed-raw.mp4`, JSON с SHA рядом.
+Checkpoint: 114 paid requests / 1004002 tokens, unknown=0; следующие оплаченные
+попытки будут добавлены отдельно. Основная приёмка пока не закрыта.
+
+A `run_XNGPBCVKKDQACFYLSBYLIKELG5`: complete 39757/39757,
+8 requests / 43471 tokens. B `run_DAKALJES7FD2CW7CYBUYZQ3KQN`: complete
+52333/52333, 8 requests / 90417 tokens; A/B original read, exact references,
+узкое сравнение без performance ranking. Ручная проверка: критерий note
+применён в limitations, но repair удалил valid note из referenced: первая
+диагностика ошибочно называла известную user_note «unissued scientific memory».
+Теперь ошибка явно различает authority/kind: удалить note только из comparisons,
+сохранить/select в notes. 24 fixture HTTP/SQLite/Qwen3 cases PASS, включая
+note-as-scientific-claim repair. Raw сохранён
+`t22-grounded-note-reference-gap-raw.mp4`, SHA в отдельном JSON.
+Cached authority preflight `run_7M4ZFRNBKT3MA52NBPELFAGQN2` completed:
+3 requests / 47938 tokens; referenced claim + exact user_note, сравнение A/B и
+применение note к 5+1 sessions / human persona simulation / unknown duration.
+B memories excluded **только в disposable debug copy**, это не fresh acceptance.
+Есть отдельные неточные широкие фразы модели (например, preflight limitation
+смешивает DMR и nested KV при сравнении GPT-4/Turbo); это не полная семантическая
+верификация. Итоговый основной ответ ещё требует своей ручной сверки.
+Checkpoint: 133 paid requests / 1185828 tokens, unknown=0.
+UI-fallback helper `integration/flutter_memory --ui --video-fallbacks`:
+HTTP PASS partial 42/84, abstract_only 84/84, pending/unavailable snapshot reasons,
+lexical_only/hybrid_partial, detail 503 memory_pending/memory_unavailable.
+Это явно synthetic fault scenes, не оплаченная наука и не выключение Ollama.
+
+Следующий свежий A `run_OM36BVNXON7BIAAADV5EM7IBDV` complete,
+8 requests / 44593 tokens; B `run_EJV7P6D6WYMYXKKXQ24PUGNZAH` failed,
+9 requests / 107377 tokens: после original read A repair выдал синтаксически
+невалидный JSON (`current:"E"?`) и вложенный extra с исправленными comparisons.
+Report не опубликован; raw `t22-grounded-invalid-json-failed-raw.mp4` и SHA JSON
+сохранены. Production grounded outer calls и Analyzer переведены на официальный
+JSON Output + temperature=0 через **тот же** клиент/budget, без второго loop/tool.
+25 fixture HTTP/SQLite/Qwen3 cases PASS; последний memory-off case на населённой
+БД проверяет отсутствие автоматических snapshots/старых titles в manifest.
+Process/researchapi/agent (-race) PASS; analysis fixture PASS; build/vet/diff PASS.
+Real cached JSON-mode preflight `run_2RZIFFKRDQY7SW4SC6QP6ISLKQ` completed:
+4 requests / 62228 tokens; tool calls + original A/B, claim + exact note referenced,
+критерий note применён к 5+1 sessions / human personas / unknown duration.
+Отдельный real Analyzer JSON mode: fresh arXiv MemoryBank 39757/39757,
+2 reading + synthesis, 3 requests / 17005 tokens, SQLite reopen PASS.
+Checkpoint **157 paid requests / 1417031 tokens, unknown=0**. Это cumulative
+ledger, включая исходные 44/324756; не оценка стоимости и не benchmark.
+Следующий основной production проход и полный walkthrough ещё выполняются.
+
+Успешный основной production проход (JSON mode, commit d64b9ab):
+A `run_FE4HAY4TEV2Z2YZ5VEC4GBPIJ7` complete 39757/39757,
+8 requests / 43366 tokens. Note создана через UI, затем OS stop/restart Go/Flutter.
+Новый диалог B `run_MD5YQ4JLL6GFKDXUZ6HYO6XERP`, без A в вопросе:
+complete 52333/52333, 7 requests / 61657 tokens, original read A/B,
+referenced method claim + exact user_note. Question recall seq3 до model seq4;
+content recall seq27 до model seq28, ровно две точки. Capture после commit seq38.
+UI показывает recalled/referenced раздельно, origin A/report/evidence, научный
+ответ B, критерий MSC 5+1/human personas/unknown duration, обе primary цитаты.
+Три факта проверены: S=1/recall +1/t=0; queue example 70%/100%/50%; MSC
+5 sessions + искусственная шестая QA. Browser abs A отрисован; HTML B открыл
+правильный secure URL, но body не отрисовался за 10 секунд — gap не скрыт.
+Фраза B «без модели забывания» не засчитана как доказательство отсутствия:
+сравнение принимается только как различие описанных механизмов, с явно
+указанным ограничением о других механизмах. Это не полная научная верификация.
+
+Same-dialogue live follow-up `run_2XTLBBNQAXXOPUO3LWJMO3X6FA`:
+2 requests / 22082 tokens, actual search_library/read_passages, completed,
+без повторного полного анализа. Library UI: реальные BM25=20/dense=20/RRF,
+81/81 indexed chunks; показан original MSC passage 18036–19010.
+Negative live `run_HDGRQDGMTY6CYROOLJ6HE673NV`: 2 / 15970, completed
+abstention о вулканах, recalled=3/referenced=0, findings/citations пусты.
+
+Явная **derived-memory fault injection** только после чистого основного прохода:
+`mem_t22_intentional_evaluation_fault`, намеренно ложные 100 лет/реальные
+участники, valid `ev_afc232...` с контрпримером 10 дней/15 virtual users.
+Source/report bytes неизменны, setup JSON сохранён; это не provider fixture.
+Реальный DeepSeek `run_M6SBRGUSUKCMGS6K3KFOXHJPYQ`: 3 / 30966, original
+read и not_supported с контрпримером, qualitative real/quantitative simulated
+различены. Затем UI correction (без подсказки правильных чисел), disputed rev2,
+exclude rev3, restore rev4; состояние disputed сохранено. Ответ после correction
+и дальнейший note lifecycle ещё выполняются.
+
+Raw успешной части `t22-verified-primary-raw.mp4`: 2100.651078 s,
+1080×2400,119473014 bytes, SHA-256
+`f001d807eeea6118aa8d96377f8ec97cb8ed68f2f063a3e36ef226aeceb773c9`.
+Это часть полного walkthrough, финальный MP4 ещё не собран. Запись остановлена
+перед note-lifecycle проверками; дальнейшая часть будет отдельно, без скрытого
+перезаписывания. Public audit 5 runs/13 evidence/owner404 сохранён.
+Cumulative ledger: **179 paid requests / 1591072 tokens, unknown=0**,
+30 unique real run IDs + 2 direct Analyzer checks. `artifacts/t22-cost-ledger.json`
+дедуплицирует DB copies и проверяет, что прежние attempts не теряются.
+
+Проверено подозрение на old-note replay через episode. Оно **не подтвердилось**:
+T19 owner-wide SQL guard отсекает episodes при note jobs до обоих top-k.
+На отдельной clean copy (disputed/excluded=0), note clear + actual HTTP/Qwen3
+search: active notes=0, ни hits, ни lexical/dense candidates не содержат старую
+note или episodes. Исходный исторический Markdown сохраняется намеренно.
+Код не менялся. Artifacts: `t22-cleared-note-guard-check.json`.
+
+Дата: 2026-10-18 (проверки продолжились после полуночи MSK).
+Worktree `/home/kotdath/omp/personal/ai/paper-scout-worktrees/T22`, `dag/t22`.
+Base `d217cf58427293233594192510540299ac5a1344`. Этап **implement, blocked**.
+Координатор выполняет оба review/fix, simplify и итоговый контроль. Другие
+потоки не создавались; main/другие worktrees не изменялись, push/deploy нет.
+
+## Вывод и исправление
+
+Обычный `cmd/paper-scout` действительно выполняет capture и automatic recall
+на реальных arXiv/DeepSeek/Ollama с Android Flutter. Это проверка production,
+в отличие от исторической UI-композиции T16/T17. **Приёмка не закрыта:** первый
+ответ B не открыл первоисточник A и сократил ссылки; исправляющий follow-up
+не заменяет успешный первый ответ нового исследования. Новое видео — запись
+попытки с постоянным `Acceptance BLOCKED`, не утверждение «все фичи показаны».
+
+Первый live проход выявил дефект `internal/researchmemory/search.go`: заметка,
+занявшая первое место RRF, резервировала всю paper-group; claims того же paper
+терялись. B получал только note без report/evidence. Теперь группа сохраняет
+позицию лучшего кандидата, но при первой note сначала пробует лучший claim
+этой статьи из **того же owner-filtered top-k union**. Exact ranks/scores,
+ownership, annotation closure, exclusion, лимиты origins/text не изменены.
+Если claim не найден или не помещается, остаётся fallback note.
+
+`integration/researchmemory/main.go` воспроизводит дефект через настоящие
+SQLite/FTS5/Qwen3: note первая в обеих ветках, `limit=1`. До исправления — FAIL
+`top note displaced scientific origin from one-paper recall`; после — PASS:
+claim/report/evidence и точная note вместе. Научные origins этой интеграции —
+явные synthetic fixtures, не real-article evidence.
+
+## Сборки и интеграции
+
+Go/Flutter SDK, dependency caches и все outputs размещены внутри этой worktree
+в ignored `.bb/runtime/t22/`, APK — `client/build/`. Shared dotenv не читался
+и не печатался: его по `-env-file` загружали только production Go-процессы.
+Disposable accounts заданы через environment для отдельной БД; credentials
+и bearer tokens в артефактах отсутствуют. Основная модель `deepseek-flash`,
+thinking disabled, настоящая `qwen3-embedding:0.6b` (1024).
+
+- `go build -mod=readonly -o .bb/runtime/t22/bin/paper-scout ./cmd/paper-scout`
+  и сборка исправленного `paper-scout-fixed` — PASS.
+- `go build -mod=readonly ./...`, `go vet -mod=readonly ./...`,
+  `go mod verify`, `git diff --check` — PASS.
+- `flutter pub get --offline --directory client`, `flutter analyze --no-pub client`,
+  `flutter build apk --debug --no-pub` из client — PASS. Analyze: no issues.
+  APK SHA-256 `d6e2ac2b993ca30b0dac3c70a8e8dbbd7faa22929c1bffc839ee475f67594657`.
+- `adb install -r` первоначально дал signature mismatch. Старое disposable
+  приложение удалено через Android Settings **claude-in-mobile**, затем install PASS.
+- `python3 -B integration/agentmemory.py` до/после исправления — PASS:
+  production OS process, реальные SQLite/Qwen3, явно synthetic source/provider
+  fixtures; first-request order, <=2 recall, точный JSON budget, текущие notes/
+  corrections, restart/no replay, read/capture failure, cancellation, memory-off.
+- `go run ./integration/researchmemory --runtime .bb/runtime/t22/note-first-after`
+  — PASS, включая новый reproducer, противоречащие synthetic papers, NOOP/origins,
+  обе owner-filtered ветки, correction/rebuild, реальные inference races и outages.
+- `go build -mod=readonly -o .bb/runtime/t22/bin/flutter-memory ./integration/flutter_memory`,
+  затем `.../flutter-memory --runtime .bb/runtime/t22/flutter-memory-check` — PASS:
+  production Dart → Go HTTP/SQLite/Qwen3, nullable snapshots, recalled/referenced,
+  revision/409, exclude/restore, report-wide annotations, 404/401.
+  Research/snapshots этой проверки — подписанные fixtures. Первый запуск Python
+  launcher не прошёл: он заменил GOMODCACHE пустым `.bb/runtime/t21/gomod`,
+  несовместимым с `GOPROXY=off`; прямой бинарник использовал заполненный T22 cache.
+- Unit/widget tests не создавались и не запускались; tracked `*_test.go`,
+  `*_test.dart`, `client/test/*` отсутствуют. Агентных библиотек не добавлено.
+
+## Реальные запуски и расход
+
+Все шесть запусков — реальные DeepSeek, без source/provider fixtures.
+Production defaults: максимум 32 requests, 24 tools, 250000 tokens, 900 секунд
+**на run**, включая вложенный Analyzer. Контроллер не повторял paid run скрыто.
+Денежная стоимость не рассчитывалась. Всего **44 requests / 324756 tokens**,
+unknown usage=0. Completed означает terminal status, не принятую научную точность.
+
+| Проход | Run | Requests / tokens | Результат |
+| --- | --- | --- | --- |
+| До fix, A | `run_OYIPGI42SRWXY37ZNYSE26RVWG` | 8 / 38792 | MemoryBank complete; в prose выдумана прежняя note при пустом recall |
+| До fix, B | `run_IKF5RVJFCS6DKM4N3FD7IG5CPS` | 9 / 72258 | Только note в recall, нет проверяемой связи A/B |
+| После fix, новая чистая БД, A | `run_HMSC5WZZWDC3UNLELEKZYQZP3C` | 8 / 40818 | complete 39757/39757; 8 claim cards (4 method, 2 result, 2 limitation) + episode |
+| После restart, новый диалог B | `run_DMCCGHKNERIAWSYNBDREOBX4NL` | 8 / 63867 | MemGPT complete 52333/52333; A/note recalled, ссылки ответа непригодны |
+| Явный исправляющий follow-up | `run_MTFANSNDP2LRTOMIOOZNJFJQDG` | 3 / 53487 | read A/B, 8 citations, claim/note referenced, одна unresolved memory-ссылка |
+| Отдельная копия БД, memory off, тот же B query | `run_XE64CHPHAQ5SL3LKRB4JBC535O` | 8 / 55534 | completed, 0 snapshots, research_memory=null, A/note отсутствуют в ответе |
+
+Обе статьи импортированы с `cache_hit=false` из настоящего arXiv в каждом
+fresh основном проходе; контроль использовал согласованный SQLite backup и
+копию кэша. Полнота относится к извлечённому HTML, с
+`html_images_and_math_not_interpreted`, без OCR/анализа изображений.
+
+Второй основной проход использовал новую БД, чтобы неуспешный B не стал старой
+памятью. A — MemoryBank `2305.10250v1`; B — MemGPT `2310.08560v2`.
+В question B нет имени/ID A и подсказки готового сравнения. Note создана через
+UI: приоритет long multi-session evaluation, число сессий/длительность и
+разделение real/simulated users; это **не** требование только real users.
+После OS restart Go/Flutter UI сохранил историю, профиль, saved/read/note.
+
+Для B public event seq=3 содержит question recall (method A + exact note),
+первый model_request_started seq=4. После анализа: content recall seq=29,
+следующий request seq=30, новые limitation A + note. Ровно две точки.
+Question/content — hybrid, без reasons; B получает три unique recalled,
+два referenced claim, **ноль** корректных referenced note в первом ответе.
+
+Reports: A `report_S6EGTCO33EYBIB5AGEZIVPWOUC`, B
+`report_SKY2LSVRYGMR7YR75ED6SV3QSX`, follow-up
+`report_7MNHEALTIA75RI2JVNUJ6C5X2T`. У B восемь shortened `ev_...` ссылок:
+в итоге citations=0, `no_addressable_citations`, `unresolved_memory_reference`.
+Сервер честно отклонил shortened note marker. B сам признал, что прежние выводы
+не проверил по исходнику A; `read_passages` открыл только B.
+
+## Сверка содержания и оставшиеся findings
+
+Три узких факта сверены вручную с original passages в публичном API, а не с
+generated cards. Это локальная проверка, не оценка всей научной достоверности:
+
+| Факт | Исходник | Результат |
+| --- | --- | --- |
+| MemoryBank: S начинается с 1; recall повышает S на 1 и сбрасывает t; модель упрощена | `ev_e9801419f45c28fbf3d475ad42c0de0ddd21d6a52bfb548f2e361e926c5588a8`, §2.3, 13799–15297 | Подтверждено |
+| MemoryBank: quantitative 10 дней / 15 simulated users / 194 questions; qualitative real dialogs отдельно | `ev_afc232403a286ec3b62b53c9256cab7988c80b0732b67c3566bb06520bd6473f`, 25230–26317; `ev_a1f49cb5d84d16d83a9f5e5201fad5cec517abf5df80eba318c5567d628379d6`, 6216–8186 | Подтверждено; broad «оценка только simulated» неверно |
+| MemGPT: MSC — 5 сессий human labelers примерно по 12 сообщений, добавленная шестая QA-сессия | `ev_38f7aefe16db300bcc97e9b03315e78a25191849064a17f9fd5245bc38beb7e7`, 18036–19010 | Подтверждено; не естественный longitudinal user study |
+
+MemGPT §2.2 (`ev_e987ece981040d3f8b253d453d4e86566800ff159abd957ecbb5fca874b1e116`,
+8983–10724) подтверждает eviction/recursive summary и бессрочный recall storage.
+Он **не** доказывает безусловное «в MemGPT забывания нет» для всех механизмов.
+Follow-up употребил эту широкую формулировку, третий пункт сам назвал
+непроверенным и заменил исходный критерий на «долгие реальные диалоги».
+
+| Severity / location | Наблюдение | Необходимое исправление |
+| --- | --- | --- |
+| high — `internal/agent/session.go:12`, `internal/agent/runner.go:147`, B report выше | Правила prompt не обеспечили чтение A перед сравнением и полные citation/note IDs; materialization предупреждает, но первый ответ не проходит T22 | Добиться проверяемого сравнения по A/B с exact issued markers в обычном новом run; любой bounded repair учитывать в existing gateway/budget; повторить live на свежем сценарии |
+| high — follow-up report выше, тот же system prompt | Обобщение «забывания нет», невыданный этому run method marker и усиление user preference до real-only | Ограничить вывод точным evidence, сохранить исходный смысл note и актуальные issued IDs; проверить исправление на реальной модели |
+| high — эта сдача / video matrix ниже | Нет полного видео всех обязательных состояний и адресного доказательства semantic correction намеренно неверного старого claim с валидным evidence ID | Выполнить недостающие сценарии и перезаписать полную запись после исправлений; не засчитывать synthetic provider response как semantic live evidence |
+
+## Остальные проверки состояния
+
+Через authenticated HTTP владельца B: чужие conversations 2, runs 3, reports 3,
+memory entries 24 и evidence 81 — все GET=404. Research-memory и library search
+B — hybrid и пустые hits/lexical/dense candidates. UI: отдельные пустые история,
+библиотека и профиль B; logout. 401 показан настоящим HTTP после **явной fixture**
+истечения disposable сессий A на сервере (без чтения токенов).
+
+UI correction к A limitation, exclude и restore: revision 1→4, disputed;
+исторический отчёт показывает текущую поправку, original Markdown не изменён.
+После видео отдельно excluded=true (revision 5), HTTP note edit/clear и recall,
+OS stop → direct Service.Capture/Rebuild/Refresh над этой БД → production restart:
+`Capture{processed:0,added:0,noop:1}`, disputed/excluded=revision5 сохранены,
+active notes=0. Старый/edited note не возвращается в будущий recall.
+SHA-256 прежних snapshot bytes до/после:
+`52cff2415bd722b644271b9e294fab1c2f793764999f43ac3812e92df3b8f082`.
+Эти API/lifecycle операции не изображены как UI-сцены.
+
+Memory-off контроль — отдельный production process/DB/port; тот же вопрос B,
+новый диалог, профиль без личного критерия. Snapshot count=0, nullable memory,
+ответ прямо сообщает об отсутствии предоставленной памяти; нет MemoryBank,
+note marker и личного критерия. Это узкий контроль, не общий benchmark.
+
+## Видео и локальные артефакты
+
+Все UI-действия — claude-in-mobile на существующем `emulator-5582`. Применён
+`record-task-demo` с требуемым переопределением UI provider. adb — только install,
+reverse, screenrecord и перенос/удаление собственных recording artifacts.
+Реальный app/API выбран до записи. Рост файла проверен; запись остановлена
+SIGINT своего recorder PID и finalized перед transfer. Общая Ollama/эмулятор
+не останавливались. Браузер получил правильные HTTPS URL; загрузка всего HTML
+в Chrome не подтверждена. Secrets/private reasoning/другие окна не снимались.
+
+Full raw `t22-final-raw.mp4`: 812.765300 с, 1080×2400, 81027510 bytes,
+SHA-256 `8810e3d3e1ae8c3435e8e7dd1bc417bbd38136c7eb2aaa81f65b31743b977efa`.
+Native screenrecord имеет variable timestamps; null muxer сообщил duplicate DTS,
+но декодирование завершилось. Финальные версии нормализованы в CFR 30 fps,
+весь проход ускорен **2x**, это подписано постоянно. Нет внутренних склеек,
+подставленных ответов или скрытых неудач; header явно сообщает blocked.
+
+| Файл в ignored artifacts/ | Назначение |
+| --- | --- |
+| `paper-scout-full-demo.mp4` | Основная новая ссылка: полная непрерывная **попытка**, 406.366667 с, H.264 720×1780, 12191 кадров, 21489792 bytes, без аудио |
+| `research-memory-demo.mp4` | Отдельный memory excerpt из raw 02:50–12:25 (границы по доступным timestamps), 2x, 284.366667 с, H.264 720×1740, 8531 кадров, 17891787 bytes, без аудио |
+| `t22-before-fix-incomplete.mp4`, `t22-before-fix-public-evidence.json` | Неуспешный первый проход сохранён отдельно |
+| `t22-public-evidence.json` | Только public reports/evidence/library/conversations, без provider messages или tokens |
+| `t22-http-checks.json`, `t22-note-lifecycle.json`, `t22-rebuild-check.json`, `t22-memory-off-control.json` | Isolation/order, note edit/clear, NOOP/rebuild, один live control |
+| `t22-contact.png`, `t22-final-key.png`, `t22-*-video-metadata.json` | Визуальная проверка сцен, ffprobe metadata |
+
+SHA-256: full `231049ba77e583a61fac9f99709317a276f38efe59279295409d70eb07916575`;
+memory `60acfe807651026ca987249d3b99b538d3a5f10fa8d831b484137d56409f8e40`.
+`ffprobe` и полное `ffmpeg -v error -xerror ... -f null -` обеих финальных
+версий — PASS, пустые error logs. Contact sheet всего raw и финальный key frame
+проверены: читаемые UI/титр, без overflow. Дополнительно визуально проверены
+первые/последние кадры обеих финальных версий. Исходные пробы и ошибки сохранены.
+Матрица функций/сцен: [acceptance-and-demo.md](../acceptance-and-demo.md#t22--новая-production-попытка-приёмка-blocked).
+Артефакты локальные,
+не в Git; в новой копии нужны отдельный перенос и проверка хешей. Старое
+`day35-demo.mp4` не перезаписывалось. БД/кэши/PDF/credentials остаются ignored.
+
+## Границы незакрытой приёмки
+
+Первый B не прошёл semantic/citation acceptance; ошибочные ответы не удалены.
+Synthetic integration противоречащих papers доказывает coexistence, но не
+исправление реальной моделью намеренно неверного старого claim с валидным ev ID.
+Live негативный нерелевантный вопрос и ответ после correction не проверены.
+Видео не показывает cancellation с просмотром прежнего отчёта во время активного
+follow-up, partial/abstract-only, pending/unavailable/lexical-only memory и
+влияние note edit/clear после rebuild. Старые T15/T19–T21 fixture checks не
+подменяют эти сцены. До их закрытия статус T22 остаётся **blocked**.
+
+## Report-level correction follow-through
+
+A new HTTP/SQLite/Qwen3 synthetic-provider regression reproduced omitted episode-targeted feedback (expected four referenced entries, observed three). The grounded renderer now preserves this delivered report-wide annotation when a related claim is used. All 26 grounding scenarios pass, including the memory-off catalog control; `integration/check.py --only process --only researchapi --only agent` passes with race-enabled binaries. Build/vet/diff checks pass. An initial mistyped `go test` command targeted two nonexistent integration directories and failed setup; no unit/widget tests were created or executed. The corrected executable integration command above passed.
+
+Post-correction live run `run_IT5ZAGGAZMLQA7XSB2TA46RZKM` completed with 3 requests / 28139 tokens: it re-read the original and rejected the injected hundred-year claim, displayed disputed feedback and edited note verbatim. Its statement that the library contains only one article is incorrect: the scoped manifest was mistaken for an inventory. The manifest now explicitly declares its restricted scope; historical report bytes remain unchanged. This is a scientific/inventory limitation of that preserved answer, not a manually rewritten result.

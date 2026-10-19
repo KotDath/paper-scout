@@ -43,6 +43,12 @@ String runFailure(dynamic code) =>
           'Исчерпан бюджет запуска. Доступный результат сохранён.',
       'context_limit':
           'История не помещается в контекст. Создайте новый диалог с той же библиотекой.',
+      'answer_validation_failed':
+          'Ответ не прошёл проверку ссылок или исходных выдержек после одной попытки исправления. Отчёт не опубликован.',
+      'grounding_unavailable':
+          'Не удалось проверить происхождение источников. Отчёт не опубликован.',
+      'memory_context_limit':
+          'Память с происхождением ссылок не помещается в контекст. Уточните вопрос.',
       'run_interrupted': 'Сервер перезапущен. Автоматического повтора нет.',
     }[code] ??
     'Причина: $code';
@@ -408,6 +414,17 @@ class _ConversationPaneState extends State<ConversationPane> {
             if (run['id'] != executing?['id'])
               heading(context, statusText(run['status'])),
             if (run['error_code'] != null) Text(runFailure(run['error_code'])),
+            if (run['usage'] case final Json usage) ...[
+              Text(
+                'Расход запуска: ${usage['deepseek_requests'] ?? 0} запросов модели · '
+                '${usage['total_tokens'] ?? 0} токенов · '
+                '${usage['tool_calls'] ?? 0} обращений к инструментам',
+              ),
+              if ((usage['unknown_usage_requests'] as num? ?? 0) > 0)
+                Text(
+                  'Точный расход ${usage['unknown_usage_requests']} запросов неизвестен.',
+                ),
+            ],
             if (!activeRun(run) && run['report_id'] == null)
               const Text(
                 'Готового отчёта нет. Доступные источники и ход работы сохранены.',
@@ -502,6 +519,8 @@ class EventTile extends StatelessWidget {
           'analysis_progress': 'Анализ текста',
           'retrieval_completed': 'Поиск по библиотеке',
           'memory_recalled': 'Найдена память прошлых исследований',
+          'answer_rejected': 'Ответ требует исправления ссылок или выдержек',
+          'answer_accepted': 'Ответ со ссылками подготовлен',
           'tool_failed': 'Ошибка инструмента',
           'report_saved': 'Отчёт сохранён',
           'run_finished': 'Запуск завершён',

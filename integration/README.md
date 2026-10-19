@@ -1,5 +1,18 @@
 # Интеграционные проверки T15
 
+T22 production final-answer contract проверяется отдельно:
+`python3 -B integration/grounding.py`. Это production cmd/paper-scout → настоящий
+HTTP/auth/SQLite/Qwen3; source/provider — явно synthetic fixtures, paid calls=0.
+26 сценариев проверяют exact E/M/Q handles и canonical IDs, primary reads A/B,
+один repair/повторную ошибку, budgets/cancel, owner scope, ошибочный old claim с
+валидным ev ID, direct/report-level disputed correction, literal user note injection, приватный
+draft audit и атомарную canonical history/report публикацию. Unit tests нет.
+Старые production assertions `agentmemory.py`, допускающие completed с invalid
+ссылками, заменены новым строгим контрактом; historical T20 результаты остаются
+в verification. Composed legacy API без WithGrounding не изменён. Process
+fixtures T15/T12 теперь возвращают явный source-free JSON abstention; сценарии
+ошибок/retry/crash и наблюдение HTTP cancellation сохраняются.
+
 Из корня текущего worktree:
 
 ```sh
@@ -94,12 +107,24 @@ healthy inference stays real. No dotenv, DeepSeek, unit/widget tests or device
 interaction. Contracts and exact results: `docs/research-memory.md`,
 `docs/verification/T19.md`. Use a new runtime directory for each invocation.
 
-T20 automatic memory integration: `python3 integration/agentmemory.py` builds and
-restarts the ordinary `cmd/paper-scout`, using real SQLite/auth/tools/Qwen3 and a
-clearly labeled Chat Completions HTTP fixture. It covers pre-model recall,
-content recall, snapshots/references, owner isolation, note edits/correction,
-cancellation, context budgets, capture failure/recovery and memory-off control.
-`python3 integration/agentmemory.py --live --env-file /path/to/shared/.env` also
-runs real DeepSeek on a fresh synthetic A/B corpus; only the Go child loads the
-file. `DEEPSEEK_MODEL` defaults to the existing runbook's `deepseek-flash` for this
-check. This is an integration smoke, not the real-article/UI acceptance in T22.
+T20 `agentmemory.py` is retained as a historical prose-provider fixture and shared
+seed helpers. Its old CLI (including its `--live` branch) is **not compatible**
+with the production grounded contract; do not use it as a current passing check.
+T20 historical results remain in verification/T20.md.
+
+Current production commands: `python3 -B integration/grounding.py` and
+`python3 -B integration/history_replay.py`. The first covers exact references,
+original reads, bounded repair/failure, cancel/budget, canonical accepted replay,
+notes/corrections and memory-off. The second inspects actual fixture-provider
+input after report-level correction/exclusion and note edit/clear, including
+annotation failure, metadata budgets, the five-report bound and memory-off.
+Both use production Go HTTP/auth/SQLite, real Qwen3 and clearly labelled synthetic
+science/provider fixtures; no paid calls or unit/widget tests. They do not claim
+that every historical T20 content-recall/capture-failure scenario was rerun.
+
+T22 review2: `python3 -B integration/history_lifecycle.py` adds eight sequential
+production HTTP/SQLite/Qwen3 scenarios, with synthetic sources/provider and paid0:
+note edit→follow-up→clear (memory on/off), correction revision, correction aging
+after seven follow-ups, legacy notices, dependency overflow/foreign dependency,
+and archive hash failure. It inspects actual fixture-provider input and checks
+immutable reports and canonical publication. It does not rerun paid A/B science.

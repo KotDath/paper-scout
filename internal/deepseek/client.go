@@ -49,17 +49,24 @@ func (c *DeepSeekClient) Complete(ctx context.Context, input Request) (Response,
 		return result, contextError(err, false)
 	}
 	wire := struct {
-		Model      string    `json:"model"`
-		Messages   []Message `json:"messages"`
-		Tools      []Tool    `json:"tools,omitempty"`
-		ToolChoice string    `json:"tool_choice,omitempty"`
-		MaxTokens  int       `json:"max_tokens"`
-		Stream     bool      `json:"stream"`
-		Thinking   struct {
+		Model          string          `json:"model"`
+		Messages       []Message       `json:"messages"`
+		Tools          []Tool          `json:"tools,omitempty"`
+		ToolChoice     string          `json:"tool_choice,omitempty"`
+		MaxTokens      int             `json:"max_tokens"`
+		Stream         bool            `json:"stream"`
+		ResponseFormat json.RawMessage `json:"response_format,omitempty"`
+		Temperature    *float64        `json:"temperature,omitempty"`
+		Thinking       struct {
 			Type string `json:"type"`
 		} `json:"thinking"`
 	}{Model: c.model, Messages: input.Messages, Tools: input.Tools, MaxTokens: input.MaxTokens}
 	wire.Thinking.Type = c.thinking
+	if input.JSONOutput {
+		wire.ResponseFormat = json.RawMessage(`{"type":"json_object"}`)
+		zero := float64(0)
+		wire.Temperature = &zero
+	}
 	if len(input.Tools) > 0 {
 		wire.ToolChoice = "auto"
 	}
